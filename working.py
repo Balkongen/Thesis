@@ -10,49 +10,56 @@ NUMBER_OF_NODES = 10
 #NEW
 RADIO_DIST = 3
 
+def print_network():
+    for inner in network:
+        print(inner)   
+
+
 random_list = []
+
 #NEW
 edge_list = []
 node_energy = {}
 
 # Change to None or -1
+network = [[0 for x in range(ROWS)] for y in range(COLUMNS)]
 
-def create_network(rows, columns, num_of_nodes, random_list, node_energy):
-    for _ in range(num_of_nodes - 1):
-        
-        while True:
-            x = random.randint(0, rows - 1)
-            y = random.randint(0, columns - 1)
-
-            if (x, y) not in random_list:
-                random_list.append((x, y))
-                node_energy[(x, y)] = 1
-                break
-        
-    sink_node = float('inf')
-
-    node_energy[(0, 0)] = sink_node
-    random_list.append((0,0))
-        #riskerar att dubbla koordinater i network
+for n in range(NUMBER_OF_NODES - 1):
     
-create_network(rows=ROWS, columns=COLUMNS, num_of_nodes=NUMBER_OF_NODES, random_list=random_list, node_energy=node_energy)
+    while True:
+        x = random.randint(0, COLUMNS - 1)
+        y = random.randint(0, ROWS - 1)
+
+        if (x, y) not in random_list:
+            random_list.append((x, y))
+            node_energy[(x, y)] = 1
+            break
+    
+    network[x][y] = ENERGY
+    #riskerar att dubbla koordinater i network
+
 #Node energy init
 
-def create_edges(edges, nodes):
-    for nodeX in nodes:
-        for nodeY in nodes:
-            
-            if nodeX == nodeY:
-                continue
 
-            distance = math.sqrt((nodeY[0] - nodeX[0])**2 + (nodeY[1] - nodeX[1])**2)
-            if  distance > RADIO_DIST:
-                continue
+sink_node = float('inf')
 
-            if not (nodeX, nodeY, distance) in edges:
-                edges.append((nodeX, nodeY, distance))
+network[0][0] = sink_node
 
-create_edges(edges=edge_list, nodes=random_list)
+node_energy[(0, 0)] = float('inf')
+random_list.append((0,0))
+
+for nodeX in random_list:
+    for nodeY in random_list:
+        
+        if nodeX == nodeY:
+            continue
+
+        distance = math.sqrt((nodeY[0] - nodeX[0])**2 + (nodeY[1] - nodeX[1])**2)
+        if  distance > RADIO_DIST:
+            continue
+
+        if not (nodeX, nodeY, distance) in edge_list:
+            edge_list.append((nodeX, nodeY, distance))
 
 print(random_list)
 # print_network()
@@ -105,6 +112,4 @@ def lifetime_membership_eq6(residual_energy, distance, k):
 
 
 THETA = [0.2, 0.8]
-
-
 
