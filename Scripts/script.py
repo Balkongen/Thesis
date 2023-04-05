@@ -38,7 +38,7 @@ def create_network(rows, columns, num_of_nodes, random_list, node_energy):
 create_network(rows=ROWS, columns=COLUMNS, num_of_nodes=NUMBER_OF_NODES, random_list=random_list, node_energy=node_energy)
 #Node energy init
 
-def create_edges(edges, nodes):
+def create_edges(edges, nodes, max_radio_distance):
     for nodeX in nodes:
         for nodeY in nodes:
             
@@ -46,24 +46,26 @@ def create_edges(edges, nodes):
                 continue
 
             distance = math.sqrt((nodeY[0] - nodeX[0])**2 + (nodeY[1] - nodeX[1])**2)
-            if  distance > RADIO_DIST:
+            if  distance > max_radio_distance:
                 continue
 
             if not (nodeX, nodeY, distance) in edges:
                 edges.append((nodeX, nodeY, distance))
 
-create_edges(edges=edge_list, nodes=random_list)
+create_edges(edges=edge_list, nodes=random_list, max_radio_distance=RADIO_DIST)
 
-print(random_list)
+
+
+# print(random_list)
 # print_network()
-print("--------")
-for x in edge_list:
-    print(x)
+# print("--------")
+# for x in edge_list:
+#     print(x)
 
 # ALL ABOVE SET UP
 
-print("----------")
-print(node_energy)
+# print("----------")
+# print(node_energy)
 
 #constants used in energy calculation
 A = 1.0e-9

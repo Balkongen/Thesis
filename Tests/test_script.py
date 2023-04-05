@@ -1,6 +1,7 @@
 import unittest
 from parameterized import parameterized
 from Scripts.script import *
+import math
 
 class Test_reserv(unittest.TestCase):
 
@@ -50,29 +51,46 @@ class Test_reserv(unittest.TestCase):
         self.assertEqual(expected, actual)
 
 
-    @unittest.skip
-    def test_lall(self):
-        expected = 1
-        actual = 1
+    def __create_edges(self, nodes, edges, distance):
+        for node_one in nodes:
+            for node_two in nodes:
+                
+                if node_one != node_two:
+                    x_dist = (node_two[0] - node_one[0])**2
+                    y_dist = (node_two[1] - node_one[1])**2
+                    c_sum = x_dist + y_dist
+                    dist = math.sqrt(c_sum)
+
+                    if dist <= distance:
+                        edges.append((node_one, node_two, dist))
+
+
+
+    def test_create_edges(self):
+        coordinates = [(0,0), (1,1), (2,2), (0,1), (0,3), (0,4), (10,10)]
+        actual = []
+        expected = []
+        create_edges(edges=actual, nodes=coordinates, max_radio_distance=2)
+        self.__create_edges(nodes=coordinates, edges=expected, distance=2)
+
+        list.sort(expected)
+        list.sort(actual)
+
+        print("--------")
+        for x in expected:
+            print(x)
+        print("--------")
+        for x in actual:
+            print(x)
+
         self.assertEqual(expected, actual)
+    
+    def test_arr(self):
+        x = [(1),(2)]
+        y = [(2),(1)]
+        list.sort(y)
 
-    @unittest.skip
-    def test_inf(self):
-        arr = [float('inf'), 0, 0]
-        count = 0
-        for x in arr:
-            if x != 0:
-                count = count + 1
-
-        self.assertEqual(1, count)
-
-
-    @parameterized.expand([
-        (1, 1, 2),
-        (2, 2, 4),
-    ])
-    def test_add(self, a, b, res):
-        self.assertEqual(res, a+b)
+        self.assertTrue(x == y)
 
 if __name__ == '__main__':
     unittest.main()
