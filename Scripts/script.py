@@ -1,6 +1,7 @@
 import random
 import matplotlib.pyplot as plt
 import math
+import heapq
 
 ENERGY = 1
 COLUMNS = 25
@@ -10,32 +11,34 @@ NUMBER_OF_NODES = 10
 #NEW
 RADIO_DIST = 3
 
-random_list = []
+#-----SiMULATION SET UP-------
+
+nodes = [] # [(x-coordinate, y-coordinate), ...]
 #NEW
-edge_list = []
-node_energy = {}
+edges = [] # [(x-coordinate, y-coordinate, distance), ...]
+node_to_energy = {} # key = node (x-coordinate, y-coordinate). Value = residual energy of node
 
 # Change to None or -1
 
-def create_network(rows, columns, num_of_nodes, random_list, node_energy):
+def create_network(rows, columns, num_of_nodes, nodes, node_energy):
     for _ in range(num_of_nodes - 1):
         
         while True:
             x = random.randint(0, rows - 1)
             y = random.randint(0, columns - 1)
 
-            if (x, y) not in random_list:
-                random_list.append((x, y))
+            if (x, y) not in nodes:
+                nodes.append((x, y))
                 node_energy[(x, y)] = 1
                 break
         
     sink_node = float('inf')
 
-    node_energy[(0, 0)] = sink_node
-    random_list.append((0,0))
+    node_to_energy[(0, 0)] = sink_node
+    nodes.append((0,0))
         #riskerar att dubbla koordinater i network
     
-create_network(rows=ROWS, columns=COLUMNS, num_of_nodes=NUMBER_OF_NODES, random_list=random_list, node_energy=node_energy)
+create_network(rows=ROWS, columns=COLUMNS, num_of_nodes=NUMBER_OF_NODES, nodes=nodes, node_energy=node_to_energy)
 #Node energy init
 
 def create_edges(edges, nodes, max_radio_distance):
@@ -52,20 +55,9 @@ def create_edges(edges, nodes, max_radio_distance):
             if not (nodeX, nodeY, distance) in edges:
                 edges.append((nodeX, nodeY, distance))
 
-create_edges(edges=edge_list, nodes=random_list, max_radio_distance=RADIO_DIST)
+create_edges(edges=edges, nodes=nodes, max_radio_distance=RADIO_DIST)
 
-
-
-# print(random_list)
-# print_network()
-# print("--------")
-# for x in edge_list:
-#     print(x)
-
-# ALL ABOVE SET UP
-
-# print("----------")
-# print(node_energy)
+#-----SiMULATION SET UP END-------
 
 #constants used in energy calculation
 A = 1.0e-9
@@ -108,5 +100,116 @@ def lifetime_membership_eq6(residual_energy, distance, k):
 
 THETA = [0.2, 0.8]
 
+# Equation 7, fuzzy membership minimun delay
+def minimum_delay_eq7(x):
+    return x
 
 
+# Equation 10, mulitobjective membership function
+# DON'T FORGET X FFS
+def multi_objective_membership_eq10(umd, ulf, x):
+    return (BETA * min(umd, ulf)) + ((1 - BETA) * ((umd + ulf) / 2)) 
+
+# Equation 11, returns new value of weight of edge
+def weight_assign_eq11(edge, package_size):
+    residual_energy = node_to_energy[edge[0]]
+    #DON'T FORGET X FFS
+    return 1 - multi_objective_membership_eq10(lifetime_membership_eq6(residual_energy, edge[2], package_size), minimum_delay_eq7(x))
+
+# Must be of existing node
+# TODO TEST
+# routing_request = nodes[0::3]
+
+
+def create_routes(routes):
+
+    for _ in range(0, 10_000):
+        index = random.randint(0, len(nodes) - 1)
+        package_size = random.randint(16, 64) # Ask supervisor for correct reasonable size
+        routes.append((nodes[index], package_size))
+        
+
+def dijsktras(edge_list, start_node, end_node):
+    # Step 1
+    
+    #dictionairy where key = a node and value is the previous node when calc dijkstras
+    path_nodes = {}
+    distances = {node: float('inf') for node in edge_list}
+    
+
+    distances[start_node] = 0
+    
+    # Step 2
+    visited = [(0, start_node)]
+    heapq.heapify(visited)
+    
+    while visited: # change name
+        # Step 3.1
+        (curr_dist, curr_node) = heapq.heappop(visited)
+        
+        #stop if visiting end_node
+        if curr_node == end_node:
+            break
+
+        # Step 3.2
+        for (from_node, no_node, w) in edge_list:
+            if from_node == curr_node:
+                new_dist = curr_dist + w
+                
+                if new_dist < distances[no_node]:
+                    
+                    distances[no_node] = new_dist
+                    #här lägger vi in föregående nod
+                    path_nodes[no_node] = from_node
+                    heapq.heappush(visited, (new_dist, no_node))
+        
+        
+    
+    # Step 4
+
+    # Creates a list of the nodes between start_node and end_node
+    path = []
+    node = end_node
+    while node != start_node:
+        path.append(node)
+        #just in case there is no path between nodes the loop stops if the previous value is None
+        if path_nodes[node] is not None:
+            node = path_nodes[node]
+        else:
+            break
+    path.append(start_node)
+    path.reverse()
+
+    #returnerar bara värdet. Vill returnera vägen också
+    return path
+
+
+def main():
+
+    #dict with edge - weight in this context
+    edge_weight = {}
+
+    # Initialize routing requests
+    routing_request = []
+    create_routes(routing_request)
+
+    lifetime_count = 0
+
+    # for all routing requests
+    for request in routing_request:
+        # for each edge in network
+        for edge in enumerate(edges):
+            #assign weight to edges and add to dict
+            edge_weight[edge] = weight_assign_eq11(edge, request[1])
+
+        #find shortest path based on new weights
+        minimum_weight_path = dijsktras(edge_weight, request[0], (0, 0))
+
+        #send_data_and_compute_new_energy(start, end)
+        
+        #check_energy_levels
+            #if any node energy = 0
+            #return
+        lifetime_count = lifetime_count = 1
+    
+    return lifetime_count

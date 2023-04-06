@@ -12,7 +12,7 @@ class Test_reserv(unittest.TestCase):
         
         coordniates = []
         expected = 30
-        create_network(rows=ROWS, columns=COLUMNS, num_of_nodes=expected, random_list=coordniates, node_energy={})
+        create_network(rows=ROWS, columns=COLUMNS, num_of_nodes=expected, nodes=coordniates, node_energy={})
         actual = len(coordniates)
 
         self.assertEqual(expected, actual)
@@ -27,7 +27,7 @@ class Test_reserv(unittest.TestCase):
     def test_number_of_nodes_in_network_parameterized(self, input, expected):
         
         coordinates = []
-        create_network(rows=ROWS, columns=COLUMNS, num_of_nodes=input, random_list=coordinates, node_energy={})
+        create_network(rows=ROWS, columns=COLUMNS, num_of_nodes=input, nodes=coordinates, node_energy={})
         actual = len(coordinates)
 
         self.assertEqual(expected, actual)
@@ -35,7 +35,7 @@ class Test_reserv(unittest.TestCase):
     
     def test_number_of_nodes_in_small_network(self):
         coordinates = []
-        create_network(rows=2, columns=2, num_of_nodes=4, random_list=coordinates, node_energy={})
+        create_network(rows=2, columns=2, num_of_nodes=4, nodes=coordinates, node_energy={})
         expected = 4
         actual = len(coordinates)
         
@@ -45,7 +45,7 @@ class Test_reserv(unittest.TestCase):
     def test_number_of_nodes_zero_added(self):
         coordniates = []
         expected = 1
-        create_network(rows=ROWS, columns=COLUMNS, num_of_nodes=0, random_list=coordniates, node_energy={})
+        create_network(rows=ROWS, columns=COLUMNS, num_of_nodes=0, nodes=coordniates, node_energy={})
         actual = len(coordniates)
 
         self.assertEqual(expected, actual)
