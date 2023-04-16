@@ -85,12 +85,29 @@ class Test_reserv(unittest.TestCase):
 
         self.assertEqual(expected, actual)
     
+
+    # FIXME fixa detta dest
+    def test_dijsktras(self):
+        coordinates = [(0,0), (1,1), (2,2), (0,1), (0,3), (0,4)]
+        edges_test = []
+        self.__create_edges(coordinates, edges_test, 2)
+        start_node = edges_test[len(edges_test) - 1]
+        actual = dijsktras(edge_list=edges_test, start_node=start_node, end_node= (0,0))
+
+
+        self.assertEqual(coordinates, actual)
+        
+
+
+
     def test_arr(self):
         x = [(1),(2)]
         y = [(2),(1)]
         list.sort(y)
 
         self.assertTrue(x == y)
+
+
 
 if __name__ == '__main__':
     unittest.main()

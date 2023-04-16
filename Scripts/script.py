@@ -15,7 +15,9 @@ RADIO_DIST = 3
 
 nodes = [] # [(x-coordinate, y-coordinate), ...]
 #NEW
-edges = [] # [(x-coordinate, y-coordinate, distance), ...]
+edges = [] # [(from_node, to_node, distance), ...]
+# node = (x-coordinate, y-coordinate)
+
 node_to_energy = {} # key = node (x-coordinate, y-coordinate). Value = residual energy of node
 
 # Change to None or -1
@@ -57,7 +59,7 @@ def create_edges(edges, nodes, max_radio_distance):
 
 create_edges(edges=edges, nodes=nodes, max_radio_distance=RADIO_DIST)
 
-#-----SiMULATION SET UP END-------
+#-----SIMULATION SET UP END-------
 
 #constants used in energy calculation
 A = 1.0e-9
@@ -114,7 +116,7 @@ def multi_objective_membership_eq10(umd, ulf, x):
 def weight_assign_eq11(edge, package_size):
     residual_energy = node_to_energy[edge[0]]
     #DON'T FORGET X FFS
-    return 1 - multi_objective_membership_eq10(lifetime_membership_eq6(residual_energy, edge[2], package_size), minimum_delay_eq7(x))
+    return 1 - multi_objective_membership_eq10(lifetime_membership_eq6(residual_energy, edge[2], package_size), minimum_delay_eq7(1))
 
 # Must be of existing node
 # TODO TEST
@@ -173,6 +175,8 @@ def dijsktras(edge_list, start_node, end_node):
     while node != start_node:
         path.append(node)
         #just in case there is no path between nodes the loop stops if the previous value is None
+    
+        # FIXME if-satsen behövs fixas 
         if path_nodes[node] is not None:
             node = path_nodes[node]
         else:
@@ -203,6 +207,7 @@ def main():
             edge_weight[edge] = weight_assign_eq11(edge, request[1])
 
         #find shortest path based on new weights
+        #TODO ska request vara indexerat med 0??
         minimum_weight_path = dijsktras(edge_weight, request[0], (0, 0))
 
         #send_data_and_compute_new_energy(start, end)
@@ -213,3 +218,7 @@ def main():
         lifetime_count = lifetime_count = 1
     
     return lifetime_count
+
+
+if __name__ == '__main__':
+    main()
