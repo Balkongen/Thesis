@@ -8,7 +8,7 @@ COLUMNS = 25
 ROWS = 25
 NUMBER_OF_NODES = 10
 
-RADIO_DIST = 3
+RADIO_DIST = 7
 
 #-----SIMULATION SET UP-------
 
@@ -107,20 +107,20 @@ def minimum_delay_eq7(x):
 
 # Equation 10, mulitobjective membership function
 # FIXME DON'T FORGET X FFS
-def multi_objective_membership_eq10(umd, ulf, x):
+def multi_objective_membership_eq10(umd, ulf):
     return (BETA * min(umd, ulf)) + ((1 - BETA) * ((umd + ulf) / 2)) 
 
 # Equation 11, returns new value of weight of edge
 def weight_assign_eq11(edge, package_size):
     residual_energy = node_to_energy[edge[0]]
     #DON'T FORGET X FFS
-    return 1 - multi_objective_membership_eq10(lifetime_membership_eq6(residual_energy, edge[2], package_size), minimum_delay_eq7(1))
+    return 1 - multi_objective_membership_eq10(lifetime_membership_eq6(residual_energy, edge[2], package_size), minimum_delay_eq7(1000))
 
 # Must be of existing node
 # TODO TEST
 # routing_request = nodes[0::3]
 
-
+# FIXME GÖR OM ELLER TA BORT
 def create_routes(routes):
 
     for _ in range(0, 10_000):
@@ -134,7 +134,7 @@ def dijsktras(edge_list, start_node, end_node):
     
     #dictionairy where key = a node and value is the previous node when calc dijkstras
     path_nodes = {}
-    distances = {node: float('inf') for node in edge_list}
+    distances = {node: float('inf') for node,_,_ in edge_list}
     
 
     distances[start_node] = 0
@@ -152,16 +152,18 @@ def dijsktras(edge_list, start_node, end_node):
             break
 
         # Step 3.2
-        for (from_node, no_node, w) in edge_list:
+        for (from_node, to_node, w) in edge_list:
             if from_node == curr_node:
                 new_dist = curr_dist + w
-                
-                if new_dist < distances[no_node]:
+                # print("Distances", distances)
+                # print("No node", no_node)
+                # print("W", w)
+                if new_dist < distances[to_node]:
                     
-                    distances[no_node] = new_dist
+                    distances[to_node] = new_dist
                     #här lägger vi in föregående nod
-                    path_nodes[no_node] = from_node
-                    heapq.heappush(visited, (new_dist, no_node))
+                    path_nodes[to_node] = from_node
+                    heapq.heappush(visited, (new_dist, to_node))
         
         
     
@@ -175,7 +177,11 @@ def dijsktras(edge_list, start_node, end_node):
         #just in case there is no path between nodes the loop stops if the previous value is None
     
         # FIXME if-satsen behövs fixas 
-        if path_nodes[node] is not None:
+        # if path_nodes[node] != None:
+        #     node = path_nodes[node]
+        # else:
+        #     break
+        if path_nodes.get(node) != None:
             node = path_nodes[node]
         else:
             break
@@ -186,6 +192,37 @@ def dijsktras(edge_list, start_node, end_node):
     return path
 
 
+def send_data_and_compute_new_energy(path, k):
+    
+    # tranmission cost on start_node
+    
+    print(path)
+    
+    for index, node in enumerate(path):
+        if index == 0:
+            # Do Only transmission
+            continue
+        if index == len(path) - 1:
+            return
+        #sending data
+        
+        next_node = path[index + 1]
+        tmp_distance = None
+        current_energy = node_to_energy[node]
+        
+        for start_node, end_node, distance in edges:
+            if start_node == node and end_node == next_node:
+                tmp_distance = distance
+
+        # To node
+        print("current node, transmission cost and reception cost")
+        print(node)
+        print(transmission_eq3(tmp_distance, k))
+        print(reception_eq4(k))
+        print("end")
+        node_to_energy[node] = current_energy - transmission_eq3(tmp_distance, k) - reception_eq4(k)
+
+
 def main():
 
     #dict with edge - weight in this context
@@ -193,22 +230,28 @@ def main():
 
     # Initialize routing requests
     routing_request = []
-    create_routes(routing_request)
+    # create_routes(routing_request)
+    routing_request.append(nodes[1])
 
     lifetime_count = 0
 
     # for all routing requests
     for request in routing_request:
         # for each edge in network
-        for edge in enumerate(edges):
+        for i, edge in enumerate(edges):
             #assign weight to edges and add to dict
             edge_weight[edge] = weight_assign_eq11(edge, request[1])
 
         #find shortest path based on new weights
         #TODO ska request vara indexerat med 0??
-        minimum_weight_path = dijsktras(edge_weight, request[0], (0, 0))
+        ###BORTA
 
-        #send_data_and_compute_new_energy(start, end)
+        print("start node:")
+        print(request)
+        minimum_weight_path = dijsktras(edge_weight, request, (0, 0))
+        
+
+        send_data_and_compute_new_energy(minimum_weight_path, 1000)
         
         #check_energy_levels
             #if any node energy = 0
@@ -218,5 +261,10 @@ def main():
     return lifetime_count
 
 
+
+
 if __name__ == '__main__':
     main()
+    print("NODES")
+    for i, node in enumerate(node_to_energy):
+        print(node, node_to_energy[node])
