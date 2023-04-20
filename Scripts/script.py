@@ -8,19 +8,17 @@ COLUMNS = 25
 ROWS = 25
 NUMBER_OF_NODES = 10
 
-#NEW
 RADIO_DIST = 3
 
-#-----SiMULATION SET UP-------
+#-----SIMULATION SET UP-------
 
 nodes = [] # [(x-coordinate, y-coordinate), ...]
-#NEW
+
 edges = [] # [(from_node, to_node, distance), ...]
 # node = (x-coordinate, y-coordinate)
 
 node_to_energy = {} # key = node (x-coordinate, y-coordinate). Value = residual energy of node
 
-# Change to None or -1
 
 def create_network(rows, columns, num_of_nodes, nodes, node_energy):
     for _ in range(num_of_nodes - 1):
@@ -38,7 +36,7 @@ def create_network(rows, columns, num_of_nodes, nodes, node_energy):
 
     node_to_energy[(0, 0)] = sink_node
     nodes.append((0,0))
-        #riskerar att dubbla koordinater i network
+
     
 create_network(rows=ROWS, columns=COLUMNS, num_of_nodes=NUMBER_OF_NODES, nodes=nodes, node_energy=node_to_energy)
 #Node energy init
@@ -67,7 +65,7 @@ B = 5.0e-11
 m = 4
 
 # Equation 3, Energy transmission cost
-def transsmon_eq3(distance, k):
+def transmission_eq3(distance, k):
     return (A + B * distance**m) * k
 
 # Equation 4, Energy reseption cost
@@ -85,18 +83,18 @@ SIGMA = 1
 def lifetime_membership_eq6(residual_energy, distance, k):
     MAXIMUM_LIFETIME = 0
     
-    current_energy = residual_energy - transsmon_eq3(distance, k)
+    current_energy = residual_energy - transmission_eq3(distance, k)
 
     if ALPHA * SIGMA < current_energy and current_energy <= SIGMA:
         #lollolo
         return 1 - ((1 - GAMMA) / (1 - ALPHA)) * (1 - current_energy / SIGMA)
         
-    elif transsmon_eq3(distance, k) < current_energy and current_energy <= ALPHA * SIGMA:
-        condition_1 = (GAMMA) / (ALPHA * (SIGMA - transsmon_eq3(distance, k))) 
-        condition_2 = current_energy - transsmon_eq3(distance, k)
+    elif transmission_eq3(distance, k) < current_energy and current_energy <= ALPHA * SIGMA:
+        condition_1 = (GAMMA) / (ALPHA * (SIGMA - transmission_eq3(distance, k))) 
+        condition_2 = current_energy - transmission_eq3(distance, k)
         return condition_1 * condition_2
 
-    elif current_energy <= transsmon_eq3(distance, k):
+    elif current_energy <= transmission_eq3(distance, k):
         return 0
 
 
@@ -108,7 +106,7 @@ def minimum_delay_eq7(x):
 
 
 # Equation 10, mulitobjective membership function
-# DON'T FORGET X FFS
+# FIXME DON'T FORGET X FFS
 def multi_objective_membership_eq10(umd, ulf, x):
     return (BETA * min(umd, ulf)) + ((1 - BETA) * ((umd + ulf) / 2)) 
 
