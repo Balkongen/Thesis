@@ -3,12 +3,34 @@ import matplotlib.pyplot as plt
 import math
 import heapq
 
-ENERGY = 1
-COLUMNS = 25
-ROWS = 25
-NUMBER_OF_NODES = 100
+# 10 x 10 nodes.
+# edge l = 2m
+# continuously consume 0.0005 J
+# Transmission cost 0.007 J
+# init energ = 500 J
+# 1000 episodes and each episode terminates when the packet is dropped
+# Measure: Number of packets delivered, lost. Total energy consumed
+# in whole process. Network lifetime. Number of dying nodes?
 
-RADIO_DIST = 7
+
+CONSTANT_ENERGY_DRAIN = 0.0005
+ENERGY = 500
+COLUMNS = 10
+ROWS = 10
+NUMBER_OF_NODES = COLUMNS * ROWS
+PROBABILITY_OF_PACKET_LOST = 0.2
+
+GRAPH_DELIVERY_RATE = []
+GRAPH_ENERGY_CONSUMPTION = []
+TOTAL_CONSUMPTION = []
+
+PACKAGE_DROPPED = 0
+
+RADIO_DIST = 1
+
+EPISODES = 1000
+
+LIFETIME_COUNT = 0
 
 #-----SIMULATION SET UP-------
 
@@ -21,28 +43,31 @@ node_to_energy = {} # key = node (x-coordinate, y-coordinate). Value = residual 
 
 node_to_maximum_path = {} # key = node (x-coordinate, y-coordinate). Value = maximum path to sink node
 
+malicious_nodes = {}
+malicious_nodes[(1, 5)] = 0
+malicious_nodes[(2, 1)] = 0
+malicious_nodes[(3, 2)] = 0
+malicious_nodes[(4, 3)] = 0
+malicious_nodes[(6, 5)] = 0
+malicious_nodes[(7, 8)] = 0
+malicious_nodes[(8, 3)] = 0
 
-def create_network(rows, columns, num_of_nodes, nodes, node_energy):
-    for _ in range(num_of_nodes - 1):
+def create_network():
+    
+    for row in range(0, 10):
+        for node in range(0,10):
+            nodes.append((node, row))
+            node_to_energy[(node, row)] = ENERGY
         
-        while True:
-            x = random.randint(0, rows - 1)
-            y = random.randint(0, columns - 1)
-
-            if (x, y) not in nodes:
-                nodes.append((x, y))
-                node_energy[(x, y)] = 1
-                break
-        
-    sink_node = float('inf')
-
-    node_to_energy[(0, 0)] = sink_node
-    nodes.append((0,0))
+    # 10 x 10 nodes.
 
     
-create_network(rows=ROWS, columns=COLUMNS, num_of_nodes=NUMBER_OF_NODES, nodes=nodes, node_energy=node_to_energy)
+create_network()
 #Node energy init
 
+# print(nodes)
+
+#Can remove
 def create_edges(edges, nodes, max_radio_distance):
     for nodeX in nodes:
         for nodeY in nodes:
@@ -59,22 +84,19 @@ def create_edges(edges, nodes, max_radio_distance):
 
 create_edges(edges=edges, nodes=nodes, max_radio_distance=RADIO_DIST)
 
+
+
 #-----SIMULATION SET UP END-------
 
 #constants used in energy calculation
-A = 1.0e-9
-B = 5.0e-11
-m = 4
+TRANSMISSION_COST = 0.007
 
 # Equation 3, Energy transmission cost
-def transmission_eq3(distance, k):
- 
-    return (A + B * distance**m) * k
-    # return 0
+def transmission_eq3():
+    return TRANSMISSION_COST
 
-# Equation 4, Energy reseption cost
-def reception_eq4(k):
-    return A * k
+def reception_eq4():
+    return 0 # No cost of reception
 
 #constants used in fuzzy lifetime membership function
 ALPHA = 0.2
@@ -86,17 +108,17 @@ SIGMA = 1
 def lifetime_membership_eq6(residual_energy, distance, k):
     MAXIMUM_LIFETIME = 0
     
-    current_energy = residual_energy - transmission_eq3(distance, k)
+    current_energy = residual_energy - transmission_eq3()
 
     if (ALPHA * SIGMA) < current_energy and current_energy <= SIGMA:
         return 1 - ((1 - GAMMA) / (1 - ALPHA)) * (1 - current_energy / SIGMA)
         
-    elif transmission_eq3(distance, k) < current_energy and current_energy <= (ALPHA * SIGMA):
-        condition_1 = (GAMMA) / (ALPHA * (SIGMA - transmission_eq3(distance, k))) 
-        condition_2 = current_energy - transmission_eq3(distance, k)
+    elif transmission_eq3() < current_energy and current_energy <= (ALPHA * SIGMA):
+        condition_1 = (GAMMA) / (ALPHA * (SIGMA - transmission_eq3())) 
+        condition_2 = current_energy - transmission_eq3()
         return condition_1 * condition_2
 
-    elif current_energy <= transmission_eq3(distance, k):
+    elif current_energy <= transmission_eq3():
         return 0
     else:
         return 1 # Sink node
@@ -120,9 +142,12 @@ def weight_assign_eq11(edge, package_size):
     return 1 - multi_objective_membership_eq10(lifetime_membership_eq6(residual_energy, edge[2], package_size), minimum_delay_eq7(edge[0]))
 
 
+# TODO ÄNDRA alternativt att fråga handledaren
+# Se till att generera startnoder på så sätt att de inte startar hos en malicious node.
+# Med probability
 def create_routes(routes):
 
-    for _ in range(0, 1000):
+    for _ in range(0, EPISODES):
         index = random.randint(0, len(nodes) - 1)
         package_size = 1000 # Ask supervisor for correct reasonable size
         routes.append((nodes[index], package_size))
@@ -177,7 +202,6 @@ def dijsktras(edge_list, start_node, end_node):
         path.append(node)
         #just in case there is no path between nodes the loop stops if the previous value is None
 
-            
         if path_nodes[node] is not None:
             node = path_nodes[node]
         else:
@@ -185,18 +209,28 @@ def dijsktras(edge_list, start_node, end_node):
     path.append(start_node)
     path.reverse()
 
-
     #returnerar bara värdet. Vill returnera vägen också
     return path
 
 
 def send_data_and_compute_new_energy(path, k):
-    
+    global PACKAGE_DROPPED
+    for node in node_to_energy: # Remove energy from all nodes.
+        node_to_energy[node] = node_to_energy[node] - CONSTANT_ENERGY_DRAIN
+
     for index, node in enumerate(path):
         
         if index == len(path) - 1:
             return
 
+        if node in malicious_nodes:
+            # 20% chance of losing package if it's a malicious node
+            if random.random() < PROBABILITY_OF_PACKET_LOST:
+                # Räkna variabel
+                PACKAGE_DROPPED = PACKAGE_DROPPED + 1
+                return
+
+        
         next_node = path[index + 1]
         tmp_distance = None
         current_energy = node_to_energy[node]
@@ -208,11 +242,11 @@ def send_data_and_compute_new_energy(path, k):
 
         if index == 0:
             # Do Only transmission on first node
-            node_to_energy[node] = current_energy - transmission_eq3(tmp_distance, k)
+            node_to_energy[node] = current_energy - transmission_eq3()
             continue
         
         #sending data
-        node_to_energy[node] = current_energy - transmission_eq3(tmp_distance, k) - reception_eq4(k)
+        node_to_energy[node] = current_energy - transmission_eq3() - reception_eq4()
 
 
 def disco_disk(edge_list, start_node, end_node):
@@ -261,6 +295,18 @@ def driver():
 
 maximum_path_distance = driver()
 
+def generate_sink_node():
+    ix = random.randint(0, NUMBER_OF_NODES - 1)
+    return nodes[ix]
+
+def calculate_energy_consumption():
+   
+    energy_left = sum(node_to_energy.values())
+
+    return (ENERGY * NUMBER_OF_NODES) - energy_left
+
+
+
 
 def main():
     #dict with edge - weight in this context
@@ -270,10 +316,11 @@ def main():
     routing_request = []
     create_routes(routing_request)
     
-    lifetime_count = 0
+    global LIFETIME_COUNT
     
     # for all routing requests
     for request in routing_request:
+        LIFETIME_COUNT = LIFETIME_COUNT + 1
         # for each edge in network
         for i, edge in enumerate(edges):
             
@@ -284,30 +331,55 @@ def main():
 
         # print("start node:")
         # print(request)
-        minimum_weight_path = dijsktras(edge_weight, request[0], (0, 0))
+
+        sink_node = generate_sink_node()
+        minimum_weight_path = dijsktras(edge_weight, request[0], sink_node)
         
-        # print("start node, end node: ", request)
-        # print("MiNI", minimum_weight_path)
+        #print("Start node:", request[0])
+        #print("Sink node:", sink_node)
+        #print("MiNI", minimum_weight_path)
+        
+        
 
         if len(minimum_weight_path) == 1:
-            
+            GRAPH_DELIVERY_RATE.append((LIFETIME_COUNT - PACKAGE_DROPPED) / LIFETIME_COUNT)
+            GRAPH_ENERGY_CONSUMPTION.append(calculate_energy_consumption())
             continue
         else:
-
             send_data_and_compute_new_energy(minimum_weight_path, 1000)
-        
-    
+            
+        GRAPH_DELIVERY_RATE.append((LIFETIME_COUNT - PACKAGE_DROPPED) / LIFETIME_COUNT)
+        GRAPH_ENERGY_CONSUMPTION.append(calculate_energy_consumption())
+
         for node in node_to_energy:
             if node_to_energy[node] <= 0:
-                return lifetime_count
+                return LIFETIME_COUNT
             
-        lifetime_count = lifetime_count + 1
+        
     
-    return lifetime_count
+    return LIFETIME_COUNT
+
 
 
 if __name__ == '__main__':
-    print("lifetime", main())
+    print("Packages sent: ", main())
+    print("Packages delivered: ", LIFETIME_COUNT - PACKAGE_DROPPED)
+    print("Dropped packages: ", PACKAGE_DROPPED)
+    print("Energy consumption: ", calculate_energy_consumption())
+    
     print("NODES")
     for i, node in enumerate(node_to_energy):
         print(node, node_to_energy[node])
+
+    life = []
+    for x in range(0, EPISODES):
+        life.append(x)
+
+    # DELIVERY RATE
+    # plt.scatter(life, GRAPH_DELIVERY_RATE, s=[1.2])
+    # plt.show()
+
+    # ENERGY CONSUMPTION
+
+    #plt.scatter(life, GRAPH_ENERGY_CONSUMPTION, s=[1.2])
+    #plt.show()
