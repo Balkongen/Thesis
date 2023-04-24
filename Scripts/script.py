@@ -115,7 +115,7 @@ def multi_objective_membership_eq10(umd, ulf):
     return (BETA * min(umd, ulf)) + ((1 - BETA) * ((umd + ulf) / 2)) 
 
 # Equation 11, returns new value of weight of edge
-def weight_assign_eq11(edge, package_size):
+def weight_assign_eq11(edge, package_size): # FIXME Ändra till edge[1]
     residual_energy = node_to_energy[edge[0]]
     return 1 - multi_objective_membership_eq10(lifetime_membership_eq6(residual_energy, edge[2], package_size), minimum_delay_eq7(edge[0]))
 
@@ -154,9 +154,9 @@ def dijsktras(edge_list, start_node, end_node):
             break
 
         # Step 3.2
-        for (from_node, to_node, w) in edge_list:
+        for (from_node, to_node, w) in edge_list: 
             if from_node == curr_node:
-                new_dist = curr_dist + w
+                new_dist = curr_dist + w # FIXME Ska vara edge_list[(from_node, to_node, w)] istället för w
                 # print("Distances", distances)
                 # print("No node", no_node)
                 # print("W", w)

@@ -28,7 +28,7 @@ PACKAGE_DROPPED = 0
 
 RADIO_DIST = 1
 
-EPISODES = 1000
+EPISODES = 200
 
 LIFETIME_COUNT = 0
 
@@ -54,92 +54,100 @@ malicious_nodes[(8, 3)] = 0
 
 def create_network():
     
-    for row in range(0, 10):
-        for node in range(0,10):
-            nodes.append((node, row))
-            node_to_energy[(node, row)] = ENERGY
-        
-    # 10 x 10 nodes.
-
-    
-create_network()
-#Node energy init
-
-# print(nodes)
-
-#Can remove
-def create_edges(edges, nodes, max_radio_distance):
-    for nodeX in nodes:
-        for nodeY in nodes:
+    for y in range(0, 10):
+        for x in range(0,10):
+            nodes.append((x, y))
+            node_to_energy[(x, y)] = ENERGY
             
-            if nodeX == nodeY:
-                continue
+create_network()
 
-            distance = math.sqrt((nodeY[0] - nodeX[0])**2 + (nodeY[1] - nodeX[1])**2)
-            if  distance > max_radio_distance:
-                continue
+def create_edges(edges, nodes, max_radio_distance):
+    for node_one in nodes:
+        for node_two in nodes:
+            
+            if node_one != node_two:
+                x_dist = (node_two[0] - node_one[0])**2
+                y_dist = (node_two[1] - node_one[1])**2
+                c_sum = x_dist + y_dist
+                dist = math.sqrt(c_sum)
 
-            if not (nodeX, nodeY, distance) in edges:
-                edges.append((nodeX, nodeY, distance))
+                if dist <= max_radio_distance:
+                    edges.append((node_one, node_two, dist))
+    
+    
+    # for nodeX in nodes:
+    #     for nodeY in nodes:
+            
+
+        
+
+
+    #         if nodeX == nodeY:
+    #             continue
+
+    #         distance = math.sqrt((nodeY[0] - nodeX[0])**2 + (nodeY[1] - nodeX[1])**2)
+    #         if  distance > max_radio_distance:
+    #             continue
+
+    #         if not (nodeX, nodeY, distance) in edges:
+    #             edges.append((nodeX, nodeY, distance))
 
 create_edges(edges=edges, nodes=nodes, max_radio_distance=RADIO_DIST)
-
-
 
 #-----SIMULATION SET UP END-------
 
 #constants used in energy calculation
 TRANSMISSION_COST = 0.007
+# TRANSMISSION_COST = 45
 
 # Equation 3, Energy transmission cost
-def transmission_eq3():
+def transmission_cost():
     return TRANSMISSION_COST
 
-def reception_eq4():
+def reception_cost():
     return 0 # No cost of reception
 
 #constants used in fuzzy lifetime membership function
 ALPHA = 0.2
 GAMMA = 0.9
 BETA = 0.2
-SIGMA = 1
+SIGMA = ENERGY 
 
 # Equation 6, Fuzzy lifetime membership function
-def lifetime_membership_eq6(residual_energy, distance, k):
+def lifetime_membership_eq6(residual_energy):
     MAXIMUM_LIFETIME = 0
     
-    current_energy = residual_energy - transmission_eq3()
+    current_energy = residual_energy - transmission_cost()
 
     if (ALPHA * SIGMA) < current_energy and current_energy <= SIGMA:
         return 1 - ((1 - GAMMA) / (1 - ALPHA)) * (1 - current_energy / SIGMA)
         
-    elif transmission_eq3() < current_energy and current_energy <= (ALPHA * SIGMA):
-        condition_1 = (GAMMA) / (ALPHA * (SIGMA - transmission_eq3())) 
-        condition_2 = current_energy - transmission_eq3()
+    elif transmission_cost() < current_energy and current_energy <= (ALPHA * SIGMA):
+        condition_1 = (GAMMA) / (ALPHA * (SIGMA - transmission_cost())) 
+        condition_2 = current_energy - transmission_cost()
         return condition_1 * condition_2
 
-    elif current_energy <= transmission_eq3():
+    elif current_energy <= transmission_cost():
         return 0
     else:
-        return 1 # Sink node
+        return 1 # Sink node # TODO Är denna rätt?
     
     
 THETA = [0.2, 0.8]
 
 # Equation 7, fuzzy membership minimun delay
 def minimum_delay_eq7(node):
-    
-    return 1 + (((THETA[0] - 1) * node_to_maximum_path[node]) / maximum_path_distance) # THETA can change based on test runs
+    return 1 + (((THETA[0] - 1) * node_to_maximum_path[node]) / max(node_to_maximum_path.values())) # THETA can change based on test runs
 
-
+# Här riskerar nätverkat att dö istället för o byta till väg som är längre
 # Equation 10, mulitobjective membership function
 def multi_objective_membership_eq10(umd, ulf):
     return (BETA * min(umd, ulf)) + ((1 - BETA) * ((umd + ulf) / 2)) 
 
 # Equation 11, returns new value of weight of edge
-def weight_assign_eq11(edge, package_size):
-    residual_energy = node_to_energy[edge[0]]
-    return 1 - multi_objective_membership_eq10(lifetime_membership_eq6(residual_energy, edge[2], package_size), minimum_delay_eq7(edge[0]))
+def weight_assign_eq11(edge):
+    residual_energy = node_to_energy[edge[1]] 
+    return 1 - multi_objective_membership_eq10(lifetime_membership_eq6(residual_energy), minimum_delay_eq7(edge[1]))
 
 
 # TODO ÄNDRA alternativt att fråga handledaren
@@ -153,8 +161,8 @@ def create_routes(routes):
         routes.append((nodes[index], package_size))
         
 
-def dijsktras(edge_list, start_node, end_node):
-    # Step 1
+def get_shortest_path(edge_list, start_node, end_node):
+   
     # print("start and end node")
     # print(start_node, end_node)
     #dictionairy where key = a node and value is the previous node when calc dijkstras
@@ -163,25 +171,22 @@ def dijsktras(edge_list, start_node, end_node):
     #add source node
     #path_nodes[start_node] = None
     distances = {node: float('inf') for node,_,_ in edge_list}
-
     distances[start_node] = 0
     
-    # Step 2
     visited = [(0, start_node)]
     heapq.heapify(visited)
     
     while visited: # change name
-        # Step 3.1
+       
         (curr_dist, curr_node) = heapq.heappop(visited)
         
         #stop if visiting end_node
         if curr_node == end_node:
             break
 
-        # Step 3.2
         for (from_node, to_node, w) in edge_list:
             if from_node == curr_node:
-                new_dist = curr_dist + w
+                new_dist = curr_dist + edge_list[(from_node, to_node, w)]
                 # print("Distances", distances)
                 # print("No node", no_node)
                 # print("W", w)
@@ -192,8 +197,9 @@ def dijsktras(edge_list, start_node, end_node):
                     path_nodes[to_node] = from_node
                     heapq.heappush(visited, (new_dist, to_node))
 
-    # Step 4
-
+    # print("distances: ")
+    # for i, node in enumerate(distances):
+        # print(node, distances[node])
     # Creates a list of the nodes between start_node and end_node
     path = []
     
@@ -206,10 +212,10 @@ def dijsktras(edge_list, start_node, end_node):
             node = path_nodes[node]
         else:
             break
+
     path.append(start_node)
     path.reverse()
 
-    #returnerar bara värdet. Vill returnera vägen också
     return path
 
 
@@ -232,48 +238,39 @@ def send_data_and_compute_new_energy(path, k):
 
         
         next_node = path[index + 1]
-        tmp_distance = None
+        #tmp_distance = None
         current_energy = node_to_energy[node]
-        
-        for start_node, end_node, distance in edges:
-            if start_node == node and end_node == next_node:
-                tmp_distance = distance
 
 
         if index == 0:
             # Do Only transmission on first node
-            node_to_energy[node] = current_energy - transmission_eq3()
+            node_to_energy[node] = current_energy - transmission_cost()
             continue
         
         #sending data
-        node_to_energy[node] = current_energy - transmission_eq3() - reception_eq4()
+        node_to_energy[node] = current_energy - transmission_cost() - reception_cost()
 
 
 def disco_disk(edge_list, start_node, end_node):
-    
     distances = {node: float('inf') for node,_,_ in edge_list}
-
     distances[start_node] = 0
     
-    # Step 2
     visited = [(0, start_node)]
     heapq.heapify(visited)
     
     while visited: # change name
-        # Step 3.1
+  
         (curr_dist, curr_node) = heapq.heappop(visited)
         
         #stop if visiting end_node
         if curr_node == end_node:
             break
 
-        # Step 3.2
+    
         for (from_node, to_node, w) in edge_list:
             if from_node == curr_node:
                 new_dist = curr_dist + w
-                # print("Distances", distances)
-                # print("No node", no_node)
-                # print("W", w)
+
                 if new_dist < distances[to_node]:
                     
                     distances[to_node] = new_dist
@@ -284,28 +281,25 @@ def disco_disk(edge_list, start_node, end_node):
     return distances[end_node]
 
 
-def driver():
+def driver(end_node_input):
     for node in nodes:
-        node_to_maximum_path[node] = disco_disk(edge_list=edges, start_node=node, end_node=(0, 0))
-          
-    
-    return max(node_to_maximum_path.values())
+        node_to_maximum_path[node] = disco_disk(edge_list=edges, start_node=node, end_node=end_node_input)
+    return
 
 
-
-maximum_path_distance = driver()
 
 def generate_sink_node():
     ix = random.randint(0, NUMBER_OF_NODES - 1)
     return nodes[ix]
 
 def calculate_energy_consumption():
-   
     energy_left = sum(node_to_energy.values())
-
     return (ENERGY * NUMBER_OF_NODES) - energy_left
 
 
+def generate_same_route(routes):
+    for x in range(0, 100):
+        routes.append(((3,0), 0))
 
 
 def main():
@@ -315,31 +309,40 @@ def main():
     # Initialize routing requests
     routing_request = []
     create_routes(routing_request)
-    
+    # generate_same_route(routing_request)
+
     global LIFETIME_COUNT
     
+    ix = 0
     # for all routing requests
     for request in routing_request:
         LIFETIME_COUNT = LIFETIME_COUNT + 1
         # for each edge in network
+        print(ix) # Counter for terminal 
+        ix = ix + 1
+
+        sink_node = generate_sink_node()
+        
+        driver(sink_node)
+
         for i, edge in enumerate(edges):
             
             #assign weight to edges and add to dict
-            edge_weight[edge] = weight_assign_eq11(edge, request[1])
-
-       
-
+            edge_weight[edge] = weight_assign_eq11(edge)
+            
+        # for i, edge in enumerate(edge_weight):
+        #     print(edge , edge_weight[edge])
+        
+    
         # print("start node:")
         # print(request)
-
-        sink_node = generate_sink_node()
-        minimum_weight_path = dijsktras(edge_weight, request[0], sink_node)
         
+        minimum_weight_path = get_shortest_path(edge_weight, request[0], sink_node)
+
         #print("Start node:", request[0])
         #print("Sink node:", sink_node)
         #print("MiNI", minimum_weight_path)
-        
-        
+    
 
         if len(minimum_weight_path) == 1:
             GRAPH_DELIVERY_RATE.append((LIFETIME_COUNT - PACKAGE_DROPPED) / LIFETIME_COUNT)
@@ -355,8 +358,6 @@ def main():
             if node_to_energy[node] <= 0:
                 return LIFETIME_COUNT
             
-        
-    
     return LIFETIME_COUNT
 
 
