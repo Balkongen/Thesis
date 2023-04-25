@@ -10,6 +10,11 @@ NUMBER_OF_NODES = 100
 
 RADIO_DIST = 7
 
+EPISODES = 10_000
+PACKAGE_SIZE = 1000
+
+lifetime_count = 0
+
 #-----SIMULATION SET UP-------
 
 nodes = [] # [(x-coordinate, y-coordinate), ...]
@@ -115,16 +120,16 @@ def multi_objective_membership_eq10(umd, ulf):
     return (BETA * min(umd, ulf)) + ((1 - BETA) * ((umd + ulf) / 2)) 
 
 # Equation 11, returns new value of weight of edge
-def weight_assign_eq11(edge, package_size): # FIXME Ändra till edge[1]
-    residual_energy = node_to_energy[edge[0]]
-    return 1 - multi_objective_membership_eq10(lifetime_membership_eq6(residual_energy, edge[2], package_size), minimum_delay_eq7(edge[0]))
+def weight_assign_eq11(edge, package_size): 
+    residual_energy = node_to_energy[edge[1]]
+    return 1 - multi_objective_membership_eq10(lifetime_membership_eq6(residual_energy, edge[2], package_size), minimum_delay_eq7(edge[1]))
 
 
 def create_routes(routes):
 
-    for _ in range(0, 1000):
+    for _ in range(0, EPISODES): # Generate only ten random routes and loop them over and over
         index = random.randint(0, len(nodes) - 1)
-        package_size = 1000 # Ask supervisor for correct reasonable size
+        package_size = PACKAGE_SIZE # Ask supervisor for correct reasonable size
         routes.append((nodes[index], package_size))
         
 
@@ -156,7 +161,7 @@ def dijsktras(edge_list, start_node, end_node):
         # Step 3.2
         for (from_node, to_node, w) in edge_list: 
             if from_node == curr_node:
-                new_dist = curr_dist + w # FIXME Ska vara edge_list[(from_node, to_node, w)] istället för w
+                new_dist = curr_dist + edge_list[(from_node, to_node, w)]
                 # print("Distances", distances)
                 # print("No node", no_node)
                 # print("W", w)
@@ -263,6 +268,7 @@ maximum_path_distance = driver()
 
 
 def main():
+    global lifetime_count
     #dict with edge - weight in this context
     edge_weight = {}
 
@@ -270,10 +276,10 @@ def main():
     routing_request = []
     create_routes(routing_request)
     
-    lifetime_count = 0
     
     # for all routing requests
     for request in routing_request:
+        lifetime_count = lifetime_count + 1
         # for each edge in network
         for i, edge in enumerate(edges):
             
@@ -294,15 +300,14 @@ def main():
             continue
         else:
 
-            send_data_and_compute_new_energy(minimum_weight_path, 1000)
+            send_data_and_compute_new_energy(minimum_weight_path, PACKAGE_SIZE)
         
     
         for node in node_to_energy:
             if node_to_energy[node] <= 0:
                 return lifetime_count
             
-        lifetime_count = lifetime_count + 1
-    
+        
     return lifetime_count
 
 
