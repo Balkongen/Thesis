@@ -8,12 +8,17 @@ COLUMNS = 25
 ROWS = 25
 NUMBER_OF_NODES = 100
 
+NUMBER_OF_TIMES_ZERO = 0
+
 RADIO_DIST = 7
 
-EPISODES = 10_000
+EPISODES = 100_000
 PACKAGE_SIZE = 1000
 
 lifetime_count = 0
+shortes_path_ratio = 0
+
+shortest_path_ratio_length = 0
 
 #-----SIMULATION SET UP-------
 
@@ -36,7 +41,7 @@ def create_network(rows, columns, num_of_nodes, nodes, node_energy):
 
             if (x, y) not in nodes:
                 nodes.append((x, y))
-                node_energy[(x, y)] = 1
+                node_energy[(x, y)] = ENERGY
                 break
         
     sink_node = float('inf')
@@ -80,12 +85,13 @@ def transmission_eq3(distance, k):
 # Equation 4, Energy reseption cost
 def reception_eq4(k):
     return A * k
+    # return 0
 
 #constants used in fuzzy lifetime membership function
 ALPHA = 0.2
 GAMMA = 0.9
 BETA = 0.2
-SIGMA = 1
+SIGMA = ENERGY
 
 # Equation 6, Fuzzy lifetime membership function
 def lifetime_membership_eq6(residual_energy, distance, k):
@@ -126,13 +132,19 @@ def weight_assign_eq11(edge, package_size):
 
 
 def create_routes(routes):
-
-    for _ in range(0, EPISODES): # Generate only ten random routes and loop them over and over
-        index = random.randint(0, len(nodes) - 1)
-        package_size = PACKAGE_SIZE # Ask supervisor for correct reasonable size
-        routes.append((nodes[index], package_size))
+    indexes = []
+    for _ in range(0, 10):
+        indexes.append(random.randint(0, len(nodes) - 1))
+    
+    for i in range(0, EPISODES): # Generate only ten random routes and loop them over and over
         
+        # index = random.randint(0, len(nodes) - 1)
 
+        package_size = PACKAGE_SIZE # Ask supervisor for correct reasonable size
+
+        routes.append((nodes[indexes[i % 10]], package_size))
+    
+        
 def dijsktras(edge_list, start_node, end_node):
     # Step 1
     # print("start and end node")
@@ -196,11 +208,13 @@ def dijsktras(edge_list, start_node, end_node):
 
 
 def send_data_and_compute_new_energy(path, k):
-    
+
+    path_distance = 0
+
     for index, node in enumerate(path):
         
         if index == len(path) - 1:
-            return
+            return path_distance
 
         next_node = path[index + 1]
         tmp_distance = None
@@ -209,7 +223,7 @@ def send_data_and_compute_new_energy(path, k):
         for start_node, end_node, distance in edges:
             if start_node == node and end_node == next_node:
                 tmp_distance = distance
-
+                path_distance = path_distance + distance
 
         if index == 0:
             # Do Only transmission on first node
@@ -218,8 +232,10 @@ def send_data_and_compute_new_energy(path, k):
         
         #sending data
         node_to_energy[node] = current_energy - transmission_eq3(tmp_distance, k) - reception_eq4(k)
+    
+    return path_distance
 
-
+        
 def disco_disk(edge_list, start_node, end_node):
     
     distances = {node: float('inf') for node,_,_ in edge_list}
@@ -251,24 +267,43 @@ def disco_disk(edge_list, start_node, end_node):
                     #här lägger vi in föregående nod
                     heapq.heappush(visited, (new_dist, to_node))
 
-
     return distances[end_node]
 
 
 def driver():
+    # ratio = Shortest distance from chosen path / shortest possible path
+    
     for node in nodes:
         node_to_maximum_path[node] = disco_disk(edge_list=edges, start_node=node, end_node=(0, 0))
           
-    
     return max(node_to_maximum_path.values())
-
 
 
 maximum_path_distance = driver()
 
+def z(min_weight_path):
+    tmp_dist = 0
+    
+    for i, node in enumerate(min_weight_path):
+
+        goon = True
+        if i == len(min_weight_path) - 1:
+            break
+
+
+        for start_node, end_node, distance in edges:
+            if (start_node == min_weight_path[i] and end_node == min_weight_path[i + 1]) or (end_node == min_weight_path[i] and start_node == min_weight_path[i + 1]):
+                tmp_dist = tmp_dist + distance
+                break
+
+    return tmp_dist
+
 
 def main():
     global lifetime_count
+    global shortes_path_ratio
+    global shortest_path_ratio_length
+
     #dict with edge - weight in this context
     edge_weight = {}
 
@@ -280,6 +315,8 @@ def main():
     # for all routing requests
     for request in routing_request:
         lifetime_count = lifetime_count + 1
+        if lifetime_count % 10 == 0:
+            print(lifetime_count)
         # for each edge in network
         for i, edge in enumerate(edges):
             
@@ -290,7 +327,54 @@ def main():
 
         # print("start node:")
         # print(request)
+
+        
         minimum_weight_path = dijsktras(edge_weight, request[0], (0, 0))
+
+        minimum_weight_path_length = len(minimum_weight_path)
+        
+        # print("minimum w path")
+        # for node in minimum_weight_path:
+        #     print(node)
+
+        temporary_dict_of_edges = {}
+
+        for nodeA, nodeB, distance in edges:
+            temporary_dict_of_edges[(nodeA, nodeB, distance)] = distance
+
+        shortest_path_path = dijsktras(temporary_dict_of_edges, request[0], (0, 0))
+        
+        shortest_path_path_length = len(shortest_path_path)
+        # print("shortest possible path")
+        # for node in shortest_path_path:
+        #     print(node)
+        
+        path_length = z(minimum_weight_path)
+
+        # print(path_distance_ration)
+        shortes_path_from_source = node_to_maximum_path[request[0]]
+
+        
+        # path_distance_ration = path_length / shortes_path_from_source
+
+        # print(path_distance_ration)
+        if shortes_path_from_source == 0:
+            NUMBER_OF_TIMES_ZERO = NUMBER_OF_TIMES_ZERO + 1
+
+
+        if shortes_path_from_source != 0:
+            # print("shortest path distances and ratio")
+            # print(path_length)
+            # print(shortes_path_from_source)
+
+            path_distance_ration = path_length / shortes_path_from_source
+            shortes_path_ratio = shortes_path_ratio + path_distance_ration
+
+            shortest_length = minimum_weight_path_length / shortest_path_path_length
+            shortest_path_ratio_length = shortest_path_ratio_length + shortest_length
+
+            # print(path_distance_ration)
+            # print("----------------")
         
         # print("start node, end node: ", request)
         # print("MiNI", minimum_weight_path)
@@ -299,20 +383,24 @@ def main():
             
             continue
         else:
+            take = send_data_and_compute_new_energy(minimum_weight_path, PACKAGE_SIZE)
+            # print("send data distnace")
+            # print(take)
 
-            send_data_and_compute_new_energy(minimum_weight_path, PACKAGE_SIZE)
         
-    
+        
         for node in node_to_energy:
             if node_to_energy[node] <= 0:
                 return lifetime_count
             
-        
     return lifetime_count
 
 
 if __name__ == '__main__':
-    print("lifetime", main())
+    life = main()
+    print("lifetime", life)
+    print("RATIO OF SHORTEST PATH distance", shortes_path_ratio / life)
+    print("RATIO OF SHORTEST PATH number of nodes", shortest_path_ratio_length / life)
     print("NODES")
     for i, node in enumerate(node_to_energy):
         print(node, node_to_energy[node])
