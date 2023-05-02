@@ -12,7 +12,7 @@ NUMBER_OF_TIMES_ZERO = 0
 
 RADIO_DIST = 7
 
-EPISODES = 100_000
+EPISODES = 200_000
 PACKAGE_SIZE = 1000
 
 lifetime_count = 0
@@ -20,7 +20,14 @@ shortes_path_ratio = 0
 
 shortest_path_ratio_length = 0
 
+maximum_path_distance = 0
+
+distance_is_zero = 0;
+
 #-----SIMULATION SET UP-------
+
+simulation_results_lifetime = []
+simulation_results_path_ratio = []
 
 nodes = [] # [(x-coordinate, y-coordinate), ...]
 
@@ -30,6 +37,48 @@ edges = [] # [(from_node, to_node, distance), ...]
 node_to_energy = {} # key = node (x-coordinate, y-coordinate). Value = residual energy of node
 
 node_to_maximum_path = {} # key = node (x-coordinate, y-coordinate). Value = maximum path to sink node
+
+def setup():
+    # Reset all data 
+    global edges
+    global nodes
+    global node_to_energy
+    global node_to_maximum_path
+
+    
+    global lifetime_count
+    global shortes_path_ratio
+    global maximum_path_distance 
+    # for testing perhaps
+    global distance_is_zero
+    
+    # good_network = True
+    while True:
+        nodes = []
+        edges = []
+
+        # For testing perhaps
+        distance_is_zero = 0
+
+        node_to_energy = {}
+        node_to_maximum_path = {}
+
+        maximum_path_distance = 0
+        lifetime_count = 0
+        shortes_path_ratio = 0
+
+        create_network(rows=ROWS, columns=COLUMNS, num_of_nodes=NUMBER_OF_NODES, nodes=nodes, node_energy=node_to_energy)
+        create_edges(edges=edges, nodes=nodes, max_radio_distance=RADIO_DIST)
+
+        try:
+            maximum_path_distance = driver()
+            break
+
+        except KeyError:
+            print("retrying network")
+    
+    # print(edges)
+
 
 
 def create_network(rows, columns, num_of_nodes, nodes, node_energy):
@@ -49,9 +98,6 @@ def create_network(rows, columns, num_of_nodes, nodes, node_energy):
     node_to_energy[(0, 0)] = sink_node
     nodes.append((0,0))
 
-    
-create_network(rows=ROWS, columns=COLUMNS, num_of_nodes=NUMBER_OF_NODES, nodes=nodes, node_energy=node_to_energy)
-#Node energy init
 
 def create_edges(edges, nodes, max_radio_distance):
     for nodeX in nodes:
@@ -67,7 +113,6 @@ def create_edges(edges, nodes, max_radio_distance):
             if not (nodeX, nodeY, distance) in edges:
                 edges.append((nodeX, nodeY, distance))
 
-create_edges(edges=edges, nodes=nodes, max_radio_distance=RADIO_DIST)
 
 #-----SIMULATION SET UP END-------
 
@@ -78,7 +123,6 @@ m = 4
 
 # Equation 3, Energy transmission cost
 def transmission_eq3(distance, k):
- 
     return (A + B * distance**m) * k
     # return 0
 
@@ -113,12 +157,13 @@ def lifetime_membership_eq6(residual_energy, distance, k):
         return 1 # Sink node
     
     
-THETA = [0.2, 0.8]
+THETA_RANGE = [0.2, 0.8]
+THETA = THETA_RANGE[1]
 
 # Equation 7, fuzzy membership minimun delay
 def minimum_delay_eq7(node):
     
-    return 1 + (((THETA[0] - 1) * node_to_maximum_path[node]) / maximum_path_distance) # THETA can change based on test runs
+    return 1 + (((THETA - 1) * node_to_maximum_path[node]) / maximum_path_distance) # THETA can change based on test runs
 
 
 # Equation 10, mulitobjective membership function
@@ -134,7 +179,15 @@ def weight_assign_eq11(edge, package_size):
 def create_routes(routes):
     indexes = []
     for _ in range(0, 10):
-        indexes.append(random.randint(0, len(nodes) - 1))
+
+        while True:
+            
+            node = random.randint(0, len(nodes) - 1)
+            nodexy = nodes[node]
+            if node_to_maximum_path[nodexy] != float("inf"): #If source node does not have a path to sink node
+                break
+            print("recreating routes")
+        indexes.append(node)
     
     for i in range(0, EPISODES): # Generate only ten random routes and loop them over and over
         
@@ -146,45 +199,37 @@ def create_routes(routes):
     
         
 def dijsktras(edge_list, start_node, end_node):
-    # Step 1
-    # print("start and end node")
-    # print(start_node, end_node)
+    
     #dictionairy where key = a node and value is the previous node when calc dijkstras
     path_nodes = {}
     path_nodes[end_node] = None
     #add source node
-    #path_nodes[start_node] = None
-    distances = {node: float('inf') for node,_,_ in edge_list}
-
-    distances[start_node] = 0
     
-    # Step 2
+    distances = {node: float('inf') for node,_,_ in edge_list}
+    distances[start_node] = 0  
+  
     visited = [(0, start_node)]
     heapq.heapify(visited)
     
     while visited: # change name
-        # Step 3.1
+        
         (curr_dist, curr_node) = heapq.heappop(visited)
         
         #stop if visiting end_node
         if curr_node == end_node:
             break
 
-        # Step 3.2
+  
         for (from_node, to_node, w) in edge_list: 
             if from_node == curr_node:
                 new_dist = curr_dist + edge_list[(from_node, to_node, w)]
-                # print("Distances", distances)
-                # print("No node", no_node)
-                # print("W", w)
+              
                 if new_dist < distances[to_node]:
                     
                     distances[to_node] = new_dist
                     #här lägger vi in föregående nod
                     path_nodes[to_node] = from_node
                     heapq.heappush(visited, (new_dist, to_node))
-
-    # Step 4
 
     # Creates a list of the nodes between start_node and end_node
     path = []
@@ -202,7 +247,6 @@ def dijsktras(edge_list, start_node, end_node):
     path.append(start_node)
     path.reverse()
 
-
     #returnerar bara värdet. Vill returnera vägen också
     return path
 
@@ -217,7 +261,7 @@ def send_data_and_compute_new_energy(path, k):
             return path_distance
 
         next_node = path[index + 1]
-        tmp_distance = None
+        tmp_distance = 0
         current_energy = node_to_energy[node]
         
         for start_node, end_node, distance in edges:
@@ -242,19 +286,19 @@ def disco_disk(edge_list, start_node, end_node):
 
     distances[start_node] = 0
     
-    # Step 2
+    
     visited = [(0, start_node)]
     heapq.heapify(visited)
     
     while visited: # change name
-        # Step 3.1
+       
         (curr_dist, curr_node) = heapq.heappop(visited)
         
         #stop if visiting end_node
         if curr_node == end_node:
             break
 
-        # Step 3.2
+       
         for (from_node, to_node, w) in edge_list:
             if from_node == curr_node:
                 new_dist = curr_dist + w
@@ -272,14 +316,14 @@ def disco_disk(edge_list, start_node, end_node):
 
 def driver():
     # ratio = Shortest distance from chosen path / shortest possible path
-    
+    # print(edges)
     for node in nodes:
         node_to_maximum_path[node] = disco_disk(edge_list=edges, start_node=node, end_node=(0, 0))
-          
+
+
+    # print(node_to_maximum_path)
     return max(node_to_maximum_path.values())
 
-
-maximum_path_distance = driver()
 
 def z(min_weight_path):
     tmp_dist = 0
@@ -302,20 +346,27 @@ def z(min_weight_path):
 def main():
     global lifetime_count
     global shortes_path_ratio
-    global shortest_path_ratio_length
+    global maximum_path_distance
+    
+    # For testing perhaps
+    global distance_is_zero
+
+   
+    setup()
 
     #dict with edge - weight in this context
     edge_weight = {}
 
     # Initialize routing requests
-    routing_request = []
+    
+    routing_request = []    
     create_routes(routing_request)
     
     
     # for all routing requests
     for request in routing_request:
         lifetime_count = lifetime_count + 1
-        if lifetime_count % 10 == 0:
+        if lifetime_count % 1000 == 0:
             print(lifetime_count)
         # for each edge in network
         for i, edge in enumerate(edges):
@@ -323,28 +374,22 @@ def main():
             #assign weight to edges and add to dict
             edge_weight[edge] = weight_assign_eq11(edge, request[1])
 
-       
-
-        # print("start node:")
-        # print(request)
-
-        
         minimum_weight_path = dijsktras(edge_weight, request[0], (0, 0))
 
-        minimum_weight_path_length = len(minimum_weight_path)
+        # minimum_weight_path_length = len(minimum_weight_path)
         
         # print("minimum w path")
         # for node in minimum_weight_path:
         #     print(node)
 
-        temporary_dict_of_edges = {}
+        # temporary_dict_of_edges = {}
 
-        for nodeA, nodeB, distance in edges:
-            temporary_dict_of_edges[(nodeA, nodeB, distance)] = distance
+        # for nodeA, nodeB, distance in edges:
+        #     temporary_dict_of_edges[(nodeA, nodeB, distance)] = distance
 
-        shortest_path_path = dijsktras(temporary_dict_of_edges, request[0], (0, 0))
+        # shortest_path_path = dijsktras(temporary_dict_of_edges, request[0], (0, 0))
         
-        shortest_path_path_length = len(shortest_path_path)
+        # shortest_path_path_length = len(shortest_path_path)
         # print("shortest possible path")
         # for node in shortest_path_path:
         #     print(node)
@@ -352,30 +397,39 @@ def main():
         path_length = z(minimum_weight_path)
 
         # print(path_distance_ration)
-        shortes_path_from_source = node_to_maximum_path[request[0]]
+        if node_to_maximum_path[request[0]] == float('inf'):
+            shortes_path_from_source = 0
+        
+        else:
+            shortes_path_from_source = node_to_maximum_path[request[0]]
+        
+        
 
         
         # path_distance_ration = path_length / shortes_path_from_source
 
         # print(path_distance_ration)
-        if shortes_path_from_source == 0:
-            NUMBER_OF_TIMES_ZERO = NUMBER_OF_TIMES_ZERO + 1
+        # if shortes_path_from_source == 0:
+        #     NUMBER_OF_TIMES_ZERO = NUMBER_OF_TIMES_ZERO + 1
 
 
         if shortes_path_from_source != 0:
+            
             # print("shortest path distances and ratio")
             # print(path_length)
             # print(shortes_path_from_source)
 
-            path_distance_ration = path_length / shortes_path_from_source
-            shortes_path_ratio = shortes_path_ratio + path_distance_ration
-
-            shortest_length = minimum_weight_path_length / shortest_path_path_length
-            shortest_path_ratio_length = shortest_path_ratio_length + shortest_length
+            
+            shortes_path_ratio = shortes_path_ratio + (path_length / shortes_path_from_source)
+            # shortest_length = minimum_weight_path_length / shortest_path_path_length
+            # shortest_path_ratio_length = shortest_path_ratio_length + shortest_length
 
             # print(path_distance_ration)
             # print("----------------")
         
+        else:
+            distance_is_zero = distance_is_zero + 1
+
         # print("start node, end node: ", request)
         # print("MiNI", minimum_weight_path)
 
@@ -397,10 +451,38 @@ def main():
 
 
 if __name__ == '__main__':
-    life = main()
-    print("lifetime", life)
-    print("RATIO OF SHORTEST PATH distance", shortes_path_ratio / life)
-    print("RATIO OF SHORTEST PATH number of nodes", shortest_path_ratio_length / life)
-    print("NODES")
-    for i, node in enumerate(node_to_energy):
-        print(node, node_to_energy[node])
+    for i in range(0, 2):
+        print("currently evaluating number: " , i)
+        life = main()
+        simulation_results_lifetime.append(life)
+        simulation_results_path_ratio.append(shortes_path_ratio / (life - distance_is_zero))
+        # print("NODES")
+        # for i, node in enumerate(node_to_energy):
+        #     print(node, node_to_energy[node])
+
+        # print("lifetime", life)
+        # print("RATIO OF SHORTEST PATH distance", shortes_path_ratio / life)
+    # print("RATIO OF SHORTEST PATH number of nodes", shortest_path_ratio_length / life)
+    print("Number of nodes", NUMBER_OF_NODES)
+    # Change the value of theta on tests.
+    print("Theta: ", THETA)
+
+    print("Average lifetime: ", sum(simulation_results_lifetime) / len(simulation_results_lifetime))
+
+
+    for i,sim in enumerate(simulation_results_lifetime):
+        print("Lifetime: ", i, sim)
+
+    for i, sim in enumerate(simulation_results_path_ratio):
+        print("Ratio: ", sim)
+
+    print("Average ratio of shortest path: ", sum(simulation_results_path_ratio) / len(simulation_results_path_ratio))
+    
+    print("done")
+    
+    
+    # print("NODES")
+    # for i, node in enumerate(node_to_energy):
+    #     print(node, node_to_energy[node])
+
+    
