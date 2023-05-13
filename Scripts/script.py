@@ -6,7 +6,7 @@ import heapq
 ENERGY = 1
 COLUMNS = 25
 ROWS = 25
-NUMBER_OF_NODES = 100
+NUMBER_OF_NODES = 90
 
 NUMBER_OF_TIMES_ZERO = 0
 
@@ -22,7 +22,7 @@ shortest_path_ratio_length = 0
 
 maximum_path_distance = 0
 
-distance_is_zero = 0;
+distance_is_zero = 0
 
 #-----SIMULATION SET UP-------
 
@@ -158,7 +158,7 @@ def lifetime_membership_eq6(residual_energy, distance, k):
     
     
 THETA_RANGE = [0.2, 0.8]
-THETA = THETA_RANGE[1]
+THETA = THETA_RANGE[0]
 
 # Equation 7, fuzzy membership minimun delay
 def minimum_delay_eq7(node):
@@ -330,7 +330,7 @@ def z(min_weight_path):
     
     for i, node in enumerate(min_weight_path):
 
-        goon = True
+        
         if i == len(min_weight_path) - 1:
             break
 
@@ -451,7 +451,7 @@ def main():
 
 
 if __name__ == '__main__':
-    for i in range(0, 2):
+    for i in range(0, 50):
         print("currently evaluating number: " , i)
         life = main()
         simulation_results_lifetime.append(life)
