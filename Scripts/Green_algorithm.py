@@ -58,38 +58,6 @@ node_to_energy = {}
 #                 if distance <= MAX_RADIO_DISTANCE:
 #                     edges.append((node_one, node_two, distance))
 
-
-def energy_aware_routing_algorithm(energy_cost, source, vertices):
-    sptSet = []
-    pred = []
-    energy = []
-
-    for i in enumerate(vertices):
-        sptSet[i] = False
-        pred[i] = float('inf')
-        energy[i] = 0
-    
-    sptSet[source] = True
-    energy[source] = float('inf')
-
-    for rank in enumerate(maxRank):
-        for node in vertices:
-            if node.rank == rank and node.energy > 0:
-                while pred[node] == -1:
-                    u =  max_energy(vertices)
-                    sptSet[u] = True
-                    for v in enumerate(vertices):
-                        if v == 0:
-                            continue
-                        
-                        if sptSet[v] == False and energy[u] + energy_cost[u][v] >= energy[v]:
-                            energy[v] = energy[u] + energy_cost[u][v] >= energy[v]
-                            pred[v] = u
-
-# returns the vertice with the highest residual energy???
-def max_energy():
-    return 0
-  
 class Node:
     def __init__(self, pos_x, pos_y):
         self.x = pos_x
@@ -117,6 +85,13 @@ class Node:
     def __eq__(self, other):
         return (self.x, self.y) == (other.x, other.y)
     
+    def __hash__(self):
+        return hash(repr(self))
+    
+    def __str__(self):
+        return "(x, y): {} \nenergy: {} \nrank: {}".format((self.x, self.y), self.energy, self.rank)
+      
+
     def print_node(self):
         print("(x, y): {} \nenergy: {} \nrank: {}".format((self.x, self.y), self.energy, self.rank))
         neighbor_string = "Neighbors:"
@@ -126,6 +101,77 @@ class Node:
         print()
             
             
+def energy_aware_routing_algorithm(energy_cost, source, vertices):
+    sptSet = {}
+    pred = {}
+    energy = {}
+
+    for index, node in enumerate(vertices):
+        sptSet[index] = False
+        pred[index] = float('inf')
+        energy[index] = 0
+
+    
+    sptSet[source] = True
+    energy[source] = float('inf')
+
+    for rank in range(maxRank):
+        for node in vertices:
+            if node.rank == rank and node.energy > 0:
+                while pred[node] == -1:
+                    u = max_energy(vertices)
+                    sptSet[u] = True
+                    for v in enumerate(vertices):
+                        if v == 0:
+                            continue
+                        
+                        if sptSet[v] == False and energy[u] + energy_cost[u][v] >= energy[v]:
+                            print("HEJ")
+                            energy[v] = energy[u] + energy_cost[u][v] >= energy[v]
+                            pred[v] = u
+
+
+# def energy_aware_routing_algorithm(energy_cost, source, vertices):
+#     sptSet = []
+#     pred = []
+#     energy = []
+
+#     # for index, node in enumerate(vertices):
+#     #     sptSet[index] = False
+#     #     pred[index] = float('inf')
+#     #     energy[index] = 0
+
+    
+        
+    
+#     sptSet[source] = True
+#     energy[source] = float('inf')
+
+#     for rank in enumerate(maxRank):
+#         for node in vertices:
+#             if node.rank == rank and node.energy > 0:
+#                 while pred[node] == -1:
+#                     u =  max_energy(vertices)
+#                     sptSet[u] = True
+#                     for v in enumerate(vertices):
+#                         if v == 0:
+#                             continue
+                        
+#                         if sptSet[v] == False and energy[u] + energy_cost[u][v] >= energy[v]:
+#                             energy[v] = energy[u] + energy_cost[u][v] >= energy[v]
+#                             pred[v] = u
+
+
+# returns the vertice with the highest residual energy???
+def max_energy():
+    energy = 0
+    for node in nodes:
+        if node.energy >= energy:
+            energy = node.energy
+    
+    return energy
+  
+
 def make_neighbors():
     for x in range(environment_rows):
         for y in range(environment_columns):
@@ -173,9 +219,10 @@ def main():
     create_ranks_new(nodes, nodes[len(nodes) - 1])
 
     # create_ranks(nodes[len(nodes) - 1]) 
+    energy_aware_routing_algorithm(10, nodes[len(nodes) - 1], nodes)
 
-    for x in nodes:
-        x.print_node()
+    # for x in nodes:
+    #     x.print_node()
 
     
     

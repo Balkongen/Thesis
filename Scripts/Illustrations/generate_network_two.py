@@ -1,15 +1,9 @@
-import random
 import matplotlib.pyplot as plt
 
 ENERGY = 1
 COLUMNS = 10
 ROWS = 10
 NUMBER_OF_NODES = 100
-
-#NEW
-RADIO_DIST = 3
-
-#-----SiMULATION SET UP-------
 
 nodes = [] # [(x-coordinate, y-coordinate), ...]
 #NEW
@@ -38,8 +32,17 @@ sink_x, sink_y = nodes[len(nodes) - 1]
 plt.scatter(nodes_x, nodes_y, c='black')
 plt.scatter([sink_x], [sink_y], c='red')
 
+# Malicious nodes
+plt.scatter([3], [5], c='yellow')
+plt.scatter([1], [6], c='yellow')
+plt.scatter([2], [5], c='yellow')
+plt.scatter([3], [6], c='yellow')
+plt.scatter([2], [0], c='yellow')
+plt.scatter([5], [7], c='yellow')
+plt.scatter([7], [8], c='yellow')
+plt.scatter([1], [3], c='yellow')
+
 plt.xlim(-1, 10)
 plt.ylim(-1, 10)
 plt.title("Network Topology")
 plt.show()
-
