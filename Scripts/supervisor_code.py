@@ -23,29 +23,23 @@ initial_node_energy = 0.7
 
 num_malicious_rows = 8
 fuzzyMaliciousNodes = {} # comment out nodes for different tests
-# fuzzyMaliciousNodes[(1, 5)] = 0
-# fuzzyMaliciousNodes[(1, 3)] = 0
-# fuzzyMaliciousNodes[(2, 1)] = 0
-# fuzzyMaliciousNodes[(2, 6)] = 0
-# fuzzyMaliciousNodes[(3, 2)] = 0
-# fuzzyMaliciousNodes[(3, 5)] = 0
-# fuzzyMaliciousNodes[(4, 3)] = 0
-# fuzzyMaliciousNodes[(4, 6)] = 0
-# fuzzyMaliciousNodes[(5, 2)] = 0
-# fuzzyMaliciousNodes[(6, 5)] = 0
-# fuzzyMaliciousNodes[(6, 7)] = 0
-# fuzzyMaliciousNodes[(7, 8)] = 0
-# fuzzyMaliciousNodes[(7, 7)] = 0
-# fuzzyMaliciousNodes[(8, 3)] = 0
-# fuzzyMaliciousNodes[(8, 1)] = 0
-fuzzyMaliciousNodes[(3, 5)] = 0
-fuzzyMaliciousNodes[(1, 6)] = 0
-fuzzyMaliciousNodes[(2, 5)] = 0
-fuzzyMaliciousNodes[(3, 6)] = 0
-fuzzyMaliciousNodes[(2, 0)] = 0
-fuzzyMaliciousNodes[(5, 7)] = 0
-fuzzyMaliciousNodes[(7, 8)] = 0
+fuzzyMaliciousNodes[(1, 5)] = 0
 fuzzyMaliciousNodes[(1, 3)] = 0
+fuzzyMaliciousNodes[(2, 1)] = 0
+fuzzyMaliciousNodes[(2, 6)] = 0
+fuzzyMaliciousNodes[(3, 2)] = 0
+fuzzyMaliciousNodes[(3, 5)] = 0
+fuzzyMaliciousNodes[(4, 3)] = 0
+fuzzyMaliciousNodes[(4, 6)] = 0
+fuzzyMaliciousNodes[(5, 2)] = 0
+fuzzyMaliciousNodes[(6, 5)] = 0
+fuzzyMaliciousNodes[(6, 7)] = 0
+fuzzyMaliciousNodes[(7, 8)] = 0
+fuzzyMaliciousNodes[(7, 7)] = 0
+fuzzyMaliciousNodes[(8, 3)] = 0
+fuzzyMaliciousNodes[(8, 1)] = 0
+
+
 
 
 maliciousNodesKeys = fuzzyMaliciousNodes.keys()

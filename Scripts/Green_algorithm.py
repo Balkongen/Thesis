@@ -209,7 +209,7 @@ def energy_aware_routing_algorithm(energy_cost, source, vertices):
                             continue
                         
                         if sptSet[v] == False and energy[u] + energy_cost[u][v] >= energy[v]:
-                            energy[v] = energy[u] + energy_cost[u][v]
+                            energy[v] = energy[u] + energy_cost[u][v] #Replace with transmission cost
                             pred[v] = u
 
 
