@@ -1,10 +1,9 @@
 import math
+import copy
+import random
 
-
-environment_rows = 3
-environment_columns = 3
-
-NUMBER_OF_NODES = environment_columns * environment_rows
+environment_rows = 10
+environment_columns = 10
 
 number_of_episodes = 1000
 transmission_energy_cost = 0.007    # the amount of energy(mJ) consumed by a node to receive and forward a packet to 1 hop distance
@@ -12,38 +11,25 @@ active_mode_energy_cost = 0.0005    #the amount of energy(mj) cosumed by a node 
 initial_node_energy = 0.7
 MAX_RADIO_DISTANCE = 1
 
+# lifetime = 0
+
+graph_delivery_rate = []
+graph_energy_consumption = []
+total_consumption = []
+
+package_dropped = 0
+sent_packet_count = 0
+lifetime = []
+path_lenght = 0
+
 
 num_malicious_rows = 8
 fuzzyMaliciousNodes = {} # comment out nodes for different tests
 
-fuzzyMaliciousNodes[(1, 5)] = 0
-fuzzyMaliciousNodes[(1, 3)] = 0
-fuzzyMaliciousNodes[(2, 1)] = 0
-fuzzyMaliciousNodes[(2, 6)] = 0
-fuzzyMaliciousNodes[(3, 2)] = 0
-fuzzyMaliciousNodes[(3, 5)] = 0
-fuzzyMaliciousNodes[(4, 3)] = 0
-fuzzyMaliciousNodes[(4, 6)] = 0
-fuzzyMaliciousNodes[(5, 2)] = 0
-fuzzyMaliciousNodes[(6, 5)] = 0
-fuzzyMaliciousNodes[(6, 7)] = 0
-fuzzyMaliciousNodes[(7, 8)] = 0
-fuzzyMaliciousNodes[(7, 7)] = 0
-fuzzyMaliciousNodes[(8, 3)] = 0
-fuzzyMaliciousNodes[(8, 1)] = 0
-
-
-maliciousNodesKeys = fuzzyMaliciousNodes.keys()
-
-
-link_table = []
-sensor_node_table = []
 
 nodes_dictionairy = {} #Tuple coordinate (x, y) is key, full node is value
-
-nodes = []
-edges = []
 node_to_energy = {}
+
 
 class Node:
     
@@ -56,9 +42,6 @@ class Node:
 
     def set_energy(self, energy):
         self.energy = energy   
-    
-    def set_rank(self, rank):
-        self.rank = rank
 
     def add_neighbor(self, new_neighbor):
         if new_neighbor not in self.neighbors:
@@ -71,10 +54,10 @@ class Node:
         return (self.x, self.y)
     
     def __eq__(self, other):
-        if not isinstance(other, Node):
-            return False
-        return (self.x, self.y) == (other.x, other.y)
-    
+        if isinstance(other, Node):
+            return (self.x, self.y) == (other.x, other.y)
+        return NotImplemented
+        
     def __hash__(self):
         return hash(repr(self))
     
@@ -92,6 +75,33 @@ class Node:
         print(neighbor_string)
         print()
 
+fuzzyMaliciousNodes[Node(1, 5)] = 0
+fuzzyMaliciousNodes[Node(1, 3)] = 0
+fuzzyMaliciousNodes[Node(2, 1)] = 0
+fuzzyMaliciousNodes[Node(2, 6)] = 0
+fuzzyMaliciousNodes[Node(3, 2)] = 0
+fuzzyMaliciousNodes[Node(3, 5)] = 0
+fuzzyMaliciousNodes[Node(4, 3)] = 0
+fuzzyMaliciousNodes[Node(4, 6)] = 0
+fuzzyMaliciousNodes[Node(5, 2)] = 0
+fuzzyMaliciousNodes[Node(6, 5)] = 0
+fuzzyMaliciousNodes[Node(6, 7)] = 0
+fuzzyMaliciousNodes[Node(7, 8)] = 0
+fuzzyMaliciousNodes[Node(7, 7)] = 0
+fuzzyMaliciousNodes[Node(8, 3)] = 0
+fuzzyMaliciousNodes[Node(8, 1)] = 0
+
+malicoius_nodes = fuzzyMaliciousNodes.keys()
+
+def create_nodes():
+    for x in range(environment_rows):
+        for y in range(environment_columns):
+            node = Node(x, y)
+            # init node energy for all created nodes in node list
+            node_to_energy[node] = initial_node_energy  
+            nodes_dictionairy[(x, y)] = node
+
+
 def make_neighbors():
     for x in range(environment_rows):
         for y in range(environment_columns):
@@ -104,44 +114,14 @@ def make_neighbors():
                 nodes_dictionairy[(x, y)].add_neighbor(nodes_dictionairy[(x, (y - 1))])
             if y < environment_columns - 1:
                 nodes_dictionairy[(x, y)].add_neighbor(nodes_dictionairy[(x, (y + 1))])
-     
-                
-def create_graph():
-    for y in range(0, environment_rows):
-        for x in range(0, environment_columns):
-            nodes.append((x, y))
-            
-            node_to_energy[(x, y)] = initial_node_energy
-
-    for node_one in nodes:
-        for node_two in nodes:
-            
-            if node_one != node_two:
-                x_dist = (node_two[0] - node_one[0])**2
-                y_dist = (node_two[1] - node_one[1])**2
-                x_y_diff = x_dist + y_dist
-                distance = math.sqrt(x_y_diff)
-    
-                if distance <= MAX_RADIO_DISTANCE:
-                    edges.append((node_one, node_two, distance))
-
-
-
-
-
 
 # STATIC
-c = 0
-
 seq = []
 
-
-def algorithm_1(source_node, hops):
-    
+def get_number_of_hops(source_node, hops):
     global c
     global seq
     
-
     neighbors = source_node.get_neighbors()
     
     for index, node in enumerate(neighbors):
@@ -159,11 +139,9 @@ def algorithm_1(source_node, hops):
             hops[neighbors[index]] = hops[source_node] + 1
             
             if (max_of_hops(neighbors=neighbors, hops=hops)[1] - hops[neighbors[index]]) > 1:
-                print("recursion")
-                algorithm_1(neighbors[index], hops)
-                # print(hops)
-    
-    
+               
+                get_number_of_hops(neighbors[index], hops)
+
     if source_node in seq:
         return
     
@@ -171,157 +149,153 @@ def algorithm_1(source_node, hops):
         seq.append(source_node)
     
     for index, node in enumerate(neighbors):
-        algorithm_1(neighbors[index], hops)
-        # print(hops)
+        get_number_of_hops(neighbors[index], hops)
+      
+    
+shortest_path = []
 
 
-            
+def get_shortest_paths(hops, neighbors, hop_number, paths, sink_node, org_sink):
+    global shortest_path
+    hop_number -= 1
+
+    for i in range(hop_number + 1): 
+        for index, node in enumerate(neighbors):
+           
+            if hops[neighbors[index]] == (hop_number - i):
+                 
+                paths[hop_number - i] = neighbors[index]
+ 
+                get_shortest_paths(hops, node.get_neighbors(), hop_number - i, paths, node, org_sink)
+
+            if (hop_number - i) == 1 and i == 0:
+                temp_paths = [node for node in paths if node != None]
+
+                # if (temp_paths not in shortest_path) and len(temp_paths) == hops[org_sink]:
+                #     shortest_path.append(temp_paths)
+                if len(temp_paths) == hops[org_sink]: #TODO changed this. May affect results
+                    shortest_path.append(temp_paths)
+      
+
 # returns distance of neighbor with max distance from source node
 def max_of_hops(neighbors, hops):
     max_distance = 0
     neighbor_list = []
+    
     for neighbor in neighbors:
         neighbor_of_neigbhors = neighbor.get_neighbors()
+        
         for neighbor_two in neighbor_of_neigbhors:
+            
             if neighbor_two not in neighbor_list:
                 neighbor_list.append(neighbor_two)
+            
             if max_distance < hops[neighbor_two]:
                 max_distance = hops[neighbor_two]
-    # print(neighbor_list)
+
     return (neighbor_list, max_distance)
         
 
-
-        
-k = 0
-# shortest_path = []
-
-def algorithm_2(hops, neighbors, hop_number, paths, sink_node, org_sink):
-    global k
-    global shortest_path
-    # global shortest_path
-    hop_number -= 1
-    # init k maybe
-    # print("K: ", k)
-    # print("shortest: ")
-    # print(shortest_path)
-    for i in range(hop_number + 1): # FIck resultat vi hop_number - 1
-        # if i == 0:
-        #     continue
-        # print("main node: ", sink_node)
-        # print("neighbors: ", neighbors)
-        for index, node in enumerate(neighbors):
-            # print("INDEX:", index)
-            # print("NEIGBOR: ", neighbors[index])
-            if hops[neighbors[index]] == (hop_number - i):
-                # print("ASd")
-                 
-                paths[hop_number - i] = neighbors[index]
-                # print("Paths: ", paths)
-                
-                # print("paths[hop_number - i]: ",paths[hop_number - i], "Length of paths: ", len(paths))
-                # print("hop_number: ", hop_number, "hop_number - 1: ", hop_number - 1)
-                # print("neighbors[index.get_position(): ] ",neighbors[index].get_position())
-                algorithm_2(hops, node.get_neighbors(), hop_number - i, paths, node, org_sink)
-                # print(paths)
-            # print("HOp ", hop_number)
-            # print("I ", i)
-
-            if (hop_number - i) == 1 and i == 0:
-
-                print("hop_number: ", hop_number)
-                print("i: ", i)
-                # print("k: ", k)
-                print("PATHS in append", paths)
-
-                temp_paths = [node for node in paths if node != None]
-                
-                if (temp_paths not in shortest_path) and len(temp_paths) == 4:
-                    shortest_path.append(temp_paths)
-                    # print(len(shortest_path))
-                # paths = [None] * (hops[org_sink])
-                
-                k = k + 1
-                
-    
-    # print("Last before return ")
-    
-    # print(shortest_path)
-    
-
-def create_nodes():
-    for x in range(environment_rows):
-        for y in range(environment_columns):
-            node = Node(x, y)
-            nodes.append(node) 
-            
-            # testing
-            nodes_dictionairy[(x, y)] = node
-
-
-shortest_path = []
-
-def main():
-    global shortest_path
+def __init__():
     create_nodes()
     make_neighbors()
-    
-    sink_node = nodes_dictionairy[(2, 2)]
 
-    hops = nodes_dictionairy.values()
-    hops = {x: 0 for x in hops}
 
-    # TODO generate source node
-    
-    start_coordinate = (0, 0)
-    
-    algorithm_1(nodes_dictionairy[start_coordinate], hops)
-    hops[nodes_dictionairy[start_coordinate]] = 0
-    print("---------------")
-    # for index, node in enumerate(hops):
-    #     print(node.get_position(), hops[node])
+def find_shortest_path(sink_node, source_node):
+    global shortest_path
+    global seq
 
-    grid = create_grid(environment_rows, environment_columns, nodes_dictionairy, hops)
-
-    # for row in grid:
-    #     print(row)
-    
-    for x in hops:
-        print(x, hops[x])
-
-    p = [None] * (hops[sink_node])# TODO FIxa den här
-    # print(p)
-
-    # test
-    for neighbor in sink_node.get_neighbors():
-        print(neighbor.get_position())
-    # end test
     shortest_path = []
-    algorithm_2(hops, sink_node.get_neighbors(), hops[sink_node], p, sink_node, sink_node)
-    print("--------")
-    # global shortest_path
+    seq = []
+    
+    hops = {x: 0 for x in copy.deepcopy(list(nodes_dictionairy.values()))}
+
+    get_number_of_hops(nodes_dictionairy[source_node], hops)
+    hops[nodes_dictionairy[source_node]] = 0
+
+    p = [None] * (hops[sink_node])
+    get_shortest_paths(hops, sink_node.get_neighbors(), hops[sink_node], p, sink_node, sink_node)
+    
+
+def print_shortest_path(shortest_path):
     for x in shortest_path:
         for y in x:
             print(y)
             
         print("--")
-    # print(shortest_path)
-    # global seq
-    # print(seq)
-    # hops[(0, 0)] = 0
+
 
 def create_grid(rows, columns, nodes, hop):
     grid = [[0]*columns for _ in range(rows)]
 
     for i in range(rows):
-        
         for j in range(columns):
+
             if (i, j) in nodes:
                 node = nodes_dictionairy[(i, j)]
                 grid[i][j] = hop[node]
                 
-
     return(grid)
+
+
+def send_data_along_path(path, total_lifetime):
+    global lifetime
+    global package_dropped
+    total_lifetime += 1
+    
+    if len(path) > 1:
+        for node in path:
+            # lifetime.append(total_lifetime)
+            # lifetime += 1
+            if node in malicoius_nodes:
+                package_dropped += 1
+                return total_lifetime
+            node_to_energy[node] -= transmission_energy_cost
+    else:
+        
+        node_to_energy[path[0]] -= transmission_energy_cost
+
+    for node in node_to_energy:
+        node_to_energy[node] -= active_mode_energy_cost
+    
+
+def main():
+    global shortest_path
+    global total_lifetime
+    total_lifetime = 0
+    __init__()
+    
+    sink_node = nodes_dictionairy[(9, 9)]
+    
+    print("start energy for nodes: ")
+    for node in node_to_energy:
+        print(node, " ", node_to_energy[node])
+
+    for x in range(0, number_of_episodes):
+        print(x)
+        while(True):
+            x = random.randint(0, environment_rows - 1)
+            y = random.randint(0, environment_columns - 1)
+            source_node = (x, y)
+
+            if not source_node == sink_node:
+                break
+        
+        find_shortest_path(sink_node=sink_node, source_node=source_node)
+        # print_shortest_path(shortest_path)
+        
+        ix = 0
+        if len(shortest_path) >= 1:
+            ix = random.randint(0, len(shortest_path) - 1)
+            send_data_along_path(shortest_path[ix], total_lifetime)
+        
+        else: # If source node is one hop away from sink          
+            send_data_along_path([nodes_dictionairy[source_node]], total_lifetime)
+
+    print("end energy for nodes: ")
+    for node in node_to_energy:
+        print(node, " ", node_to_energy[node])
+
 
 if __name__ == '__main__':
     main()
