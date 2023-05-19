@@ -71,16 +71,18 @@ class Node:
         return (self.x, self.y)
     
     def __eq__(self, other):
+        if not isinstance(other, Node):
+            return False
         return (self.x, self.y) == (other.x, other.y)
     
     def __hash__(self):
         return hash(repr(self))
     
     def __str__(self):
-        return "(x, y): {} \nenergy: {}".format((self.x, self.y), self.energy)
+        return "(x, y): {}".format((self.x, self.y))
       
     def __repr__(self):
-        return "(x, y): {} \nenergy: {}".format((self.x, self.y), self.energy)
+        return "(x, y): {}".format((self.x, self.y))
 
     def print_node(self):
         print("(x, y): {} \nenergy: {} \nrank: {}".format((self.x, self.y), self.energy, self.rank))
@@ -185,34 +187,66 @@ def max_of_hops(neighbors, hops):
                 neighbor_list.append(neighbor_two)
             if max_distance < hops[neighbor_two]:
                 max_distance = hops[neighbor_two]
-            
+    # print(neighbor_list)
     return (neighbor_list, max_distance)
         
 
 
         
 k = 0
-shortest_path = []
+# shortest_path = []
 
-def algorithm_2(hops, neighbors, hop_number, paths, sink_node):
+def algorithm_2(hops, neighbors, hop_number, paths, sink_node, org_sink):
     global k
     global shortest_path
-
+    # global shortest_path
+    hop_number -= 1
     # init k maybe
-    for i in range(hop_number): # FIck resultat vi hop_number - 1
+    # print("K: ", k)
+    # print("shortest: ")
+    # print(shortest_path)
+    for i in range(hop_number + 1): # FIck resultat vi hop_number - 1
+        # if i == 0:
+        #     continue
+        # print("main node: ", sink_node)
+        # print("neighbors: ", neighbors)
         for index, node in enumerate(neighbors):
-            
-            if hops[neighbors[index]] == hop_number - i:
+            # print("INDEX:", index)
+            # print("NEIGBOR: ", neighbors[index])
+            if hops[neighbors[index]] == (hop_number - i):
+                # print("ASd")
+                 
                 paths[hop_number - i] = neighbors[index]
-                algorithm_2(hops, max_of_hops(neighbors, hops)[0], hop_number - i, paths, node)
+                # print("Paths: ", paths)
+                
+                # print("paths[hop_number - i]: ",paths[hop_number - i], "Length of paths: ", len(paths))
+                # print("hop_number: ", hop_number, "hop_number - 1: ", hop_number - 1)
+                # print("neighbors[index.get_position(): ] ",neighbors[index].get_position())
+                algorithm_2(hops, node.get_neighbors(), hop_number - i, paths, node, org_sink)
                 # print(paths)
             # print("HOp ", hop_number)
             # print("I ", i)
 
-            if (hop_number - i) == 1:
-                # print(k)
-                shortest_path.append(paths)
-                # k = k + 1
+            if (hop_number - i) == 1 and i == 0:
+
+                print("hop_number: ", hop_number)
+                print("i: ", i)
+                # print("k: ", k)
+                print("PATHS in append", paths)
+
+                temp_paths = [node for node in paths if node != None]
+                
+                if (temp_paths not in shortest_path) and len(temp_paths) == 4:
+                    shortest_path.append(temp_paths)
+                    # print(len(shortest_path))
+                # paths = [None] * (hops[org_sink])
+                
+                k = k + 1
+                
+    
+    # print("Last before return ")
+    
+    # print(shortest_path)
     
 
 def create_nodes():
@@ -225,8 +259,10 @@ def create_nodes():
             nodes_dictionairy[(x, y)] = node
 
 
+shortest_path = []
 
 def main():
+    global shortest_path
     create_nodes()
     make_neighbors()
     
@@ -250,19 +286,27 @@ def main():
     # for row in grid:
     #     print(row)
     
-    
-    p = [0] * hops[sink_node] # TODO FIxa den här
-    print(p)
-    algorithm_2(hops, sink_node.get_neighbors(), hops[sink_node], p, sink_node)
+    for x in hops:
+        print(x, hops[x])
 
-    global shortest_path
+    p = [None] * (hops[sink_node])# TODO FIxa den här
+    # print(p)
+
+    # test
+    for neighbor in sink_node.get_neighbors():
+        print(neighbor.get_position())
+    # end test
+    shortest_path = []
+    algorithm_2(hops, sink_node.get_neighbors(), hops[sink_node], p, sink_node, sink_node)
+    print("--------")
+    # global shortest_path
     for x in shortest_path:
         for y in x:
-            print(type(y))
+            print(y)
             
         print("--")
     # print(shortest_path)
-    global seq
+    # global seq
     # print(seq)
     # hops[(0, 0)] = 0
 
