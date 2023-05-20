@@ -1,11 +1,13 @@
-import math
 import copy
 import random
+import matplotlib.pyplot as plt
 
 environment_rows = 10
 environment_columns = 10
 
-number_of_episodes = 1000
+NUMBER_OF_NODES = environment_columns * environment_rows
+
+NUMBER_OF_EPISODES = 1000
 transmission_energy_cost = 0.007    # the amount of energy(mJ) consumed by a node to receive and forward a packet to 1 hop distance
 active_mode_energy_cost = 0.0005    #the amount of energy(mj) cosumed by a node for being in active mode
 initial_node_energy = 0.7
@@ -242,6 +244,10 @@ def send_data_along_path(path, total_lifetime):
     global lifetime
     global package_dropped
     total_lifetime += 1
+
+    for node in node_to_energy:
+        if node_to_energy[node] <= 0:
+            lifetime.append(total_lifetime)
     
     if len(path) > 1:
         for node in path:
@@ -250,6 +256,7 @@ def send_data_along_path(path, total_lifetime):
             if node in malicoius_nodes:
                 package_dropped += 1
                 return total_lifetime
+            
             node_to_energy[node] -= transmission_energy_cost
     else:
         
@@ -258,11 +265,20 @@ def send_data_along_path(path, total_lifetime):
     for node in node_to_energy:
         node_to_energy[node] -= active_mode_energy_cost
     
+    return total_lifetime
+
+
+def calculate_energy_consumption():
+    energy_left = sum(node_to_energy.values())
+    return (initial_node_energy * NUMBER_OF_NODES) - energy_left
+
 
 def main():
     global shortest_path
-    global total_lifetime
-    total_lifetime = 0
+    global recursive_total_lifetime
+    global sent_packet_count
+
+    recursive_total_lifetime = 0
     __init__()
     
     sink_node = nodes_dictionairy[(9, 9)]
@@ -271,7 +287,10 @@ def main():
     for node in node_to_energy:
         print(node, " ", node_to_energy[node])
 
-    for x in range(0, number_of_episodes):
+    for x in range(0, NUMBER_OF_EPISODES):
+
+        sent_packet_count += 1
+
         print(x)
         while(True):
             x = random.randint(0, environment_rows - 1)
@@ -287,15 +306,56 @@ def main():
         ix = 0
         if len(shortest_path) >= 1:
             ix = random.randint(0, len(shortest_path) - 1)
-            send_data_along_path(shortest_path[ix], total_lifetime)
+            recursive_total_lifetime = send_data_along_path(shortest_path[ix], recursive_total_lifetime)
         
         else: # If source node is one hop away from sink          
-            send_data_along_path([nodes_dictionairy[source_node]], total_lifetime)
+            recursive_total_lifetime = send_data_along_path([nodes_dictionairy[source_node]], recursive_total_lifetime)
+
+        graph_delivery_rate.append((sent_packet_count - package_dropped) / sent_packet_count)
+        graph_energy_consumption.append(calculate_energy_consumption())
+
+        if sent_packet_count == NUMBER_OF_EPISODES:
+            return sent_packet_count
+        
+    return sent_packet_count
+
+
+if __name__ == '__main__':
+    
+    recursive_packets_sent = main()
+    recursive_delievered = sent_packet_count - package_dropped
+    total_energy_consumption = calculate_energy_consumption()
+    
+    if len(lifetime) == 0:
+        lifetime.append(recursive_total_lifetime)
+
+    if len(lifetime) == 0:
+        lifetime.append(recursive_total_lifetime)
+    
+    recursive_lifetime = lifetime[0]
+
+    print("Training complete")
+    print("Packages sent: ", recursive_packets_sent)
+    print("Packages delivered: ", recursive_delievered)
+    print("Delivery rate: ", recursive_delievered / NUMBER_OF_EPISODES)
+    print("Dropped packages: ", package_dropped)
+    print("Energy consumption: ", total_energy_consumption)
+    print("Energy efficiency: ", (sent_packet_count - package_dropped) / total_energy_consumption)
+    print("Network Lifetime: ", recursive_lifetime)
+
+    life = []
+    for x in range(0, sent_packet_count):
+        life.append(x)
+
 
     print("end energy for nodes: ")
     for node in node_to_energy:
         print(node, " ", node_to_energy[node])
 
+    # DELIVERY RATE
+    plt.plot(life, graph_delivery_rate)
+    plt.show()
 
-if __name__ == '__main__':
-    main()
+    # ENERGY CONSUMPTION
+    plt.plot(life, graph_energy_consumption)
+    plt.show()

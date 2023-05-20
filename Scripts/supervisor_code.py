@@ -219,10 +219,10 @@ def send_data_and_compute_new_energy(path, fuzzy_total_network_lifetime):
         # if the energy level of any node is zero or less, it means that the node is died
         for node in node_to_energy:
             if node_to_energy[node] <= 0:
-              lifetime.append(fuzzy_total_network_lifetime) 
+                lifetime.append(fuzzy_total_network_lifetime) 
 
         for node in node_to_energy: # Remove energy from all nodes.
-          node_to_energy[node] = node_to_energy[node] - active_mode_energy_cost
+            node_to_energy[node] = node_to_energy[node] - active_mode_energy_cost
 
         if index == len(path) - 1:
           
@@ -366,7 +366,7 @@ if __name__ == '__main__':
     print('Fuzzy Training complete!')
     print("Packages sent: ", fuzzy_packets_sent)
     print("Packages delivered: ", fuzzy_packets_delivered)
-    print("delivery rate: ", fuzzy_packets_delivered / EPISODES)
+    print("Delivery rate: ", fuzzy_packets_delivered / EPISODES)
     print("Dropped packages: ", package_dropped)
     print("Energy consumption: ", calculate_energy_consumption())
     print("Energy efficiency: ", (sent_packet_count - package_dropped) / calculate_energy_consumption())
