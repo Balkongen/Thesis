@@ -173,9 +173,8 @@ def get_shortest_paths(hops, neighbors, hop_number, paths, sink_node, org_sink):
             if (hop_number - i) == 1 and i == 0:
                 temp_paths = [node for node in paths if node != None]
 
-                # if (temp_paths not in shortest_path) and len(temp_paths) == hops[org_sink]:
-                #     shortest_path.append(temp_paths)
-                if len(temp_paths) == hops[org_sink]: #TODO changed this. May affect results
+            
+                if len(temp_paths) == hops[org_sink]: 
                     shortest_path.append(temp_paths)
       
 
@@ -353,7 +352,7 @@ if __name__ == '__main__':
     
     recursive_lifetime = lifetime[0]
 
-    print("Training complete")
+    print("Recursive training complete")
     print("Packages sent: ", recursive_packets_sent)
     print("Packages delivered: ", recursive_delievered)
     print("Delivery rate: ", recursive_delievered / NUMBER_OF_EPISODES)
