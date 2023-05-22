@@ -243,14 +243,15 @@ def create_grid(rows, columns, nodes, hop):
 def send_data_along_path(path, total_lifetime):
     global lifetime
     global package_dropped
-    total_lifetime += 1
 
-    for node in node_to_energy:
-        if node_to_energy[node] <= 0:
-            lifetime.append(total_lifetime)
-    
     if len(path) > 1:
+        
         for node in path:
+            total_lifetime += 1
+
+            check_for_dead_nodes(total_lifetime)
+            drain_active_energy_off_nodes()
+
             # lifetime.append(total_lifetime)
             # lifetime += 1
             if node in malicoius_nodes:
@@ -258,14 +259,32 @@ def send_data_along_path(path, total_lifetime):
                 return total_lifetime
             
             node_to_energy[node] -= transmission_energy_cost
-    else:
+    
+    else: #Only one node in path.
+        
+        total_lifetime += 1
+
+        check_for_dead_nodes(total_lifetime)
+        drain_active_energy_off_nodes()
+        
+        if path[0] in malicoius_nodes:
+            package_dropped += 1
+            return total_lifetime
         
         node_to_energy[path[0]] -= transmission_energy_cost
 
+    return total_lifetime
+
+
+def check_for_dead_nodes(total_lifetime):
+    for node in node_to_energy:
+            if node_to_energy[node] <= 0:
+                lifetime.append(total_lifetime)
+
+
+def drain_active_energy_off_nodes():
     for node in node_to_energy:
         node_to_energy[node] -= active_mode_energy_cost
-    
-    return total_lifetime
 
 
 def calculate_energy_consumption():

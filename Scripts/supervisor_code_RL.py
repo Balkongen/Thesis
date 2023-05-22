@@ -193,6 +193,7 @@ def R2LTO(epsilone = 0, discount_factor = 0.2, learning_rate = 0.9):
     print('number of packet delivered:', nb_success)
     print("delivery rate: ", nb_success/episode)
     print("Energy : ", total_energy)
+    print("Energy efficiency: ", nb_success / total_energy)
     print("Lifetime: ", lifetime[0])
 
     plt.plot(life, t_energy)
