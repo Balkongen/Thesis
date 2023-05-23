@@ -1,3 +1,10 @@
+"""
+Algorithm based on work done by Bouzid et al. (2020). Implemented by our supervisor: Shubham Vaishnav.
+
+Bouzid, S. E., Serrestou, Y., Raoof, K., & Omri, M. N. (2020). Efficient routing protocol for wireless sensor network based on reinforcement learning. In 2020 5th International Conference on Advanced Technologies for Signal and Image Processing (ATSIP) (pp. 1-5). IEEE. 10.1109/ATSIP49331.2020.9231883
+
+"""
+
 #INITIALIZATION AND ENVIRONMENT SETUP
 #import libraries
 import numpy as np
@@ -198,6 +205,10 @@ def R2LTO(epsilone = 0, discount_factor = 0.2, learning_rate = 0.9):
 
     plt.plot(life, t_energy)
     plt.show()
+   
+    plt.plot(life, packet_delivery)
+    plt.show()
+   
     return(packet_delivery, t_energy, alive)
 
 R2LTO()

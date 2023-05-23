@@ -1,3 +1,11 @@
+"""
+Algorithm based on work done by Minhas et al. (2009)
+
+Minhas, M. R., Gopalakrishnan, S., & Leung, V. C. M. (2009). Multiobjective Routing for Simultaneously Optimizing System Lifetime and Source-to-Sink Delay in Wireless Sensor Networks. 2009 29th IEEE International Conference on Distributed Computing Systems Workshops (p. 123-129). IEEE. 10.1109/ICDCSW.2009.83
+
+"""
+
+
 import random
 import matplotlib.pyplot as plt
 import math

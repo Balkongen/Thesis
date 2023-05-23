@@ -1,3 +1,10 @@
+"""
+Algorithm based on work done by Cota-Ruiz et al. (2016).
+
+Cota-Ruiz, J., Rivas-Perea, P., Sifuentes, E., & Gonzalez-Landaeta, R. (2016). A recursive shortest path routing algorithm with application for wireless sensor network localization. IEEE Sensors Journal, 16(11), 4631-4637. https://doi.org/10.1109/JSEN.2016.2543680.
+
+"""
+
 import copy
 import random
 import matplotlib.pyplot as plt
