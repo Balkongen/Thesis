@@ -1,5 +1,5 @@
 """
-Algorithm based on work done by Bouzid et al. (2020). Implemented by our supervisor: Shubham Vaishnav.
+Algorithm based on work done by Bouzid et al. (2020). 
 
 Bouzid, S. E., Serrestou, Y., Raoof, K., & Omri, M. N. (2020). Efficient routing protocol for wireless sensor network based on reinforcement learning. In 2020 5th International Conference on Advanced Technologies for Signal and Image Processing (ATSIP) (pp. 1-5). IEEE. 10.1109/ATSIP49331.2020.9231883
 
